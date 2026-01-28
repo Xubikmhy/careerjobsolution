@@ -8,6 +8,7 @@ import { StatusBadge, getStatusVariant } from '@/components/StatusBadge';
 import { SkillTagList } from '@/components/SkillTag';
 import { CandidateFormModal } from '@/components/CandidateFormModal';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Table,
   TableBody,
@@ -22,18 +23,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { mockCandidates } from '@/data/mockData';
+import { useCandidates, CandidateDB } from '@/hooks/useCandidates';
 import { Candidate } from '@/types';
 import { generateCandidateCV } from '@/utils/pdfGenerator';
 import { toast } from '@/hooks/use-toast';
 
 const Candidates = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [candidates, setCandidates] = useState<Candidate[]>(mockCandidates);
+  const { candidates, isLoading, addCandidate, deleteCandidate } = useCandidates();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null);
+  const [selectedCandidate, setSelectedCandidate] = useState<CandidateDB | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
   // Auto-open form when action=add is in URL
@@ -48,9 +49,9 @@ const Candidates = () => {
   const filteredCandidates = useMemo(() => {
     return candidates.filter((candidate) => {
       const matchesSearch =
-        candidate.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        candidate.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        candidate.skills.some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
+        candidate.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (candidate.address?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+        (candidate.skills || []).some((s) => s.toLowerCase().includes(searchQuery.toLowerCase()));
 
       const matchesStatus =
         statusFilter === 'all' || candidate.status === statusFilter;
@@ -60,29 +61,76 @@ const Candidates = () => {
   }, [candidates, searchQuery, statusFilter]);
 
   const handleAddCandidate = (data: Omit<Candidate, 'id' | 'createdAt'>) => {
-    const newCandidate: Candidate = {
-      ...data,
-      id: String(Date.now()),
-      createdAt: new Date(),
-    };
-    setCandidates([newCandidate, ...candidates]);
+    addCandidate.mutate({
+      full_name: data.fullName,
+      phone: data.phone,
+      address: data.address || null,
+      skills: data.skills,
+      experience_years: data.experienceYears,
+      education_level: data.educationLevel || null,
+      expected_salary: data.expectedSalary,
+      cv_url: data.cvUrl || null,
+      status: data.status,
+      date_of_birth: data.dateOfBirth || null,
+      nationality: data.nationality || null,
+      marital_status: data.maritalStatus || null,
+      languages: data.languages || [],
+      career_objective: data.careerObjective || null,
+      reference_info: data.references || null,
+      remarks: data.remarks || null,
+    });
+    setIsFormOpen(false);
   };
 
-  const handleGenerateCV = (candidate: Candidate) => {
-    generateCandidateCV(candidate);
+  const handleGenerateCV = (candidate: CandidateDB) => {
+    // Convert DB format to Candidate type for PDF generator
+    const candidateForPDF: Candidate = {
+      id: candidate.id,
+      fullName: candidate.full_name,
+      phone: candidate.phone,
+      address: candidate.address || '',
+      skills: candidate.skills || [],
+      experienceYears: candidate.experience_years,
+      educationLevel: candidate.education_level || '',
+      expectedSalary: candidate.expected_salary,
+      cvUrl: candidate.cv_url || undefined,
+      status: candidate.status as 'Active' | 'Placed',
+      references: candidate.reference_info || undefined,
+      remarks: candidate.remarks || undefined,
+      createdAt: new Date(candidate.created_at),
+      dateOfBirth: candidate.date_of_birth || undefined,
+      nationality: candidate.nationality || undefined,
+      maritalStatus: candidate.marital_status || undefined,
+      languages: candidate.languages || [],
+      careerObjective: candidate.career_objective || undefined,
+    };
+    generateCandidateCV(candidateForPDF);
     toast({
       title: 'CV Generated',
-      description: `CV for ${candidate.fullName} has been downloaded.`,
+      description: `CV for ${candidate.full_name} has been downloaded.`,
     });
   };
 
   const handleDeleteCandidate = (id: string) => {
-    setCandidates(candidates.filter((c) => c.id !== id));
-    toast({
-      title: 'Candidate Deleted',
-      description: 'The candidate has been removed.',
-    });
+    deleteCandidate.mutate(id);
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <PageHeader
+          title="Candidates"
+          description="Manage job seekers and generate CVs"
+          icon={Users}
+        />
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5].map((i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -142,7 +190,7 @@ const Candidates = () => {
                 <TableRow key={candidate.id} className="hover:bg-muted/50">
                   <TableCell>
                     <div>
-                      <p className="font-medium text-foreground">{candidate.fullName}</p>
+                      <p className="font-medium text-foreground">{candidate.full_name}</p>
                       <p className="text-sm text-muted-foreground md:hidden">{candidate.address}</p>
                     </div>
                   </TableCell>
@@ -150,13 +198,13 @@ const Candidates = () => {
                     {candidate.address}
                   </TableCell>
                   <TableCell className="hidden lg:table-cell">
-                    <SkillTagList skills={candidate.skills} max={3} />
+                    <SkillTagList skills={candidate.skills || []} max={3} />
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-muted-foreground">
-                    {candidate.experienceYears} yrs
+                    {candidate.experience_years} yrs
                   </TableCell>
                   <TableCell className="font-medium">
-                    NPR {candidate.expectedSalary.toLocaleString()}
+                    NPR {candidate.expected_salary.toLocaleString()}
                   </TableCell>
                   <TableCell>
                     <StatusBadge
@@ -222,7 +270,7 @@ const Candidates = () => {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-xl font-semibold text-foreground">
-                    {selectedCandidate.fullName}
+                    {selectedCandidate.full_name}
                   </h3>
                   <p className="text-muted-foreground">{selectedCandidate.address}</p>
                 </div>
@@ -239,27 +287,27 @@ const Candidates = () => {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Education</p>
-                  <p className="font-medium">{selectedCandidate.educationLevel}</p>
+                  <p className="font-medium">{selectedCandidate.education_level}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Experience</p>
-                  <p className="font-medium">{selectedCandidate.experienceYears} years</p>
+                  <p className="font-medium">{selectedCandidate.experience_years} years</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Expected Salary</p>
-                  <p className="font-medium">NPR {selectedCandidate.expectedSalary.toLocaleString()}</p>
+                  <p className="font-medium">NPR {selectedCandidate.expected_salary.toLocaleString()}</p>
                 </div>
               </div>
 
               <div>
                 <p className="text-muted-foreground text-sm mb-2">Skills</p>
-                <SkillTagList skills={selectedCandidate.skills} max={10} />
+                <SkillTagList skills={selectedCandidate.skills || []} max={10} />
               </div>
 
-              {selectedCandidate.references && (
+              {selectedCandidate.reference_info && (
                 <div>
                   <p className="text-muted-foreground text-sm mb-1">References</p>
-                  <p className="text-foreground">{selectedCandidate.references}</p>
+                  <p className="text-foreground">{selectedCandidate.reference_info}</p>
                 </div>
               )}
 

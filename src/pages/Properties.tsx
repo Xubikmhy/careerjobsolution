@@ -8,6 +8,7 @@ import { StatusBadge, getStatusVariant } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -23,8 +24,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { mockProperties } from '@/data/mockData';
-import { Property, LandlordInfo } from '@/types';
+import { useProperties, PropertyDB } from '@/hooks/useProperties';
 import { toast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { convertFileToBase64 } from '@/utils/agencySettings';
@@ -37,13 +37,13 @@ const facilityIcons: Record<string, React.ElementType> = {
 
 const Properties = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [properties, setProperties] = useState<Property[]>(mockProperties);
+  const { properties, isLoading, addProperty, deleteProperty } = useProperties();
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [maxRent, setMaxRent] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState<Property | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<PropertyDB | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
   // Auto-open form when action=add is in URL
@@ -57,14 +57,13 @@ const Properties = () => {
 
   // Form state with landlord info inline
   const [formData, setFormData] = useState({
-    type: 'Room' as Property['type'],
+    type: 'Room' as string,
     location: '',
     rentAmount: '',
     description: '',
     facilities: [] as string[],
     photos: [] as string[],
     remarks: '',
-    // Landlord info
     landlordName: '',
     landlordPhone: '',
     landlordAddress: '',
@@ -76,13 +75,13 @@ const Properties = () => {
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
       const matchesSearch =
-        property.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (property.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
         property.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (property.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
 
       const matchesType = typeFilter === 'all' || property.type === typeFilter;
       const matchesStatus = statusFilter === 'all' || property.status === statusFilter;
-      const matchesRent = !maxRent || property.rentAmount <= parseInt(maxRent);
+      const matchesRent = !maxRent || property.rent_amount <= parseInt(maxRent);
 
       return matchesSearch && matchesType && matchesStatus && matchesRent;
     });
@@ -98,27 +97,20 @@ const Properties = () => {
       return;
     }
 
-    const landlordInfo: LandlordInfo = {
-      fullName: formData.landlordName,
-      phone: formData.landlordPhone,
-      address: formData.landlordAddress,
-    };
-
-    const newProperty: Property = {
-      id: String(Date.now()),
-      landlordInfo,
+    addProperty.mutate({
+      landlord_name: formData.landlordName,
+      landlord_phone: formData.landlordPhone || null,
+      landlord_address: formData.landlordAddress || null,
       type: formData.type,
-      location: formData.location,
-      rentAmount: parseInt(formData.rentAmount),
+      location: formData.location || null,
+      rent_amount: parseInt(formData.rentAmount),
       facilities: formData.facilities,
       photos: formData.photos,
       status: 'Vacant',
-      description: formData.description,
-      remarks: formData.remarks || undefined,
-      createdAt: new Date(),
-    };
+      description: formData.description || null,
+      remarks: formData.remarks || null,
+    });
 
-    setProperties([newProperty, ...properties]);
     setIsFormOpen(false);
     setFormData({
       type: 'Room',
@@ -132,19 +124,10 @@ const Properties = () => {
       landlordPhone: '',
       landlordAddress: '',
     });
-
-    toast({
-      title: 'Property Added',
-      description: 'The property has been added successfully.',
-    });
   };
 
   const handleDeleteProperty = (id: string) => {
-    setProperties(properties.filter((p) => p.id !== id));
-    toast({
-      title: 'Property Deleted',
-      description: 'The property has been removed.',
-    });
+    deleteProperty.mutate(id);
   };
 
   const toggleFacility = (facility: string) => {
@@ -188,7 +171,6 @@ const Properties = () => {
       }
     }
     
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -200,6 +182,23 @@ const Properties = () => {
       photos: prev.photos.filter((_, i) => i !== index),
     }));
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <PageHeader
+          title="Properties"
+          description="Manage rental listings and vacancies"
+          icon={Home}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-64 rounded-xl" />
+          ))}
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -310,11 +309,11 @@ const Properties = () => {
                 </div>
 
                 <p className="text-xl font-bold text-primary mb-3">
-                  NPR {property.rentAmount.toLocaleString()}
+                  NPR {property.rent_amount.toLocaleString()}
                   <span className="text-sm font-normal text-muted-foreground">/month</span>
                 </p>
 
-                {property.facilities.length > 0 && (
+                {property.facilities && property.facilities.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {property.facilities.slice(0, 4).map((facility) => {
                       const Icon = facilityIcons[facility] || Droplets;
@@ -344,6 +343,7 @@ const Properties = () => {
                     className="flex-1"
                     onClick={() => {
                       setSelectedProperty(property);
+                      setViewImageIndex(0);
                       setIsViewOpen(true);
                     }}
                   >
@@ -417,7 +417,7 @@ const Properties = () => {
                 <Select
                   value={formData.type}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, type: value as Property['type'] }))
+                    setFormData((prev) => ({ ...prev, type: value }))
                   }
                 >
                   <SelectTrigger>
@@ -488,29 +488,34 @@ const Properties = () => {
               <Label>Property Photos (Max 3)</Label>
               <div className="flex flex-wrap gap-3">
                 {formData.photos.map((photo, index) => (
-                  <div key={index} className="relative w-24 h-24 rounded-lg overflow-hidden border border-border">
-                    <img src={photo} alt={`Property photo ${index + 1}`} className="w-full h-full object-cover" />
+                  <div
+                    key={index}
+                    className="relative w-20 h-20 rounded-lg overflow-hidden border border-border"
+                  >
+                    <img
+                      src={photo}
+                      alt={`Property photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
                     <button
-                      type="button"
                       onClick={() => removePhoto(index)}
-                      className="absolute top-1 right-1 bg-destructive text-destructive-foreground rounded-full p-0.5 hover:opacity-80"
+                      className="absolute top-1 right-1 p-0.5 bg-destructive rounded-full text-white hover:bg-destructive/80"
                     >
                       <X className="h-3 w-3" />
                     </button>
                   </div>
                 ))}
                 {formData.photos.length < 3 && (
-                  <label className="w-24 h-24 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center cursor-pointer hover:border-primary/50 transition-colors">
-                    <ImagePlus className="h-6 w-6 text-muted-foreground" />
-                    <span className="text-xs text-muted-foreground mt-1">Add Photo</span>
+                  <label className="w-20 h-20 rounded-lg border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary transition-colors">
                     <input
                       ref={fileInputRef}
                       type="file"
                       accept="image/*"
                       multiple
-                      className="hidden"
                       onChange={handleImageUpload}
+                      className="hidden"
                     />
+                    <ImagePlus className="h-6 w-6 text-muted-foreground" />
                   </label>
                 )}
               </div>
@@ -532,117 +537,139 @@ const Properties = () => {
               <Button variant="outline" onClick={() => setIsFormOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddProperty}>Add Property</Button>
+              <Button onClick={handleAddProperty} disabled={addProperty.isPending}>
+                {addProperty.isPending ? 'Adding...' : 'Add Property'}
+              </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
 
       {/* View Property Modal */}
-      <Dialog open={isViewOpen} onOpenChange={(open) => {
-        setIsViewOpen(open);
-        if (!open) setViewImageIndex(0);
-      }}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>Property Details</DialogTitle>
           </DialogHeader>
+
           {selectedProperty && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* Image Gallery */}
-              {selectedProperty.photos && selectedProperty.photos.length > 0 ? (
-                <div className="relative rounded-lg overflow-hidden">
-                  <img
-                    src={selectedProperty.photos[viewImageIndex]}
-                    alt={`${selectedProperty.type} photo ${viewImageIndex + 1}`}
-                    className="w-full h-48 object-cover"
-                  />
+              {selectedProperty.photos && selectedProperty.photos.length > 0 && (
+                <div className="relative">
+                  <div className="aspect-video rounded-lg overflow-hidden bg-muted">
+                    <img
+                      src={selectedProperty.photos[viewImageIndex]}
+                      alt={`${selectedProperty.type} at ${selectedProperty.location}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   {selectedProperty.photos.length > 1 && (
                     <>
-                      <button
-                        onClick={() => setViewImageIndex((prev) => (prev === 0 ? selectedProperty.photos.length - 1 : prev - 1))}
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1 rounded-full hover:bg-black/80"
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute left-2 top-1/2 -translate-y-1/2"
+                        onClick={() =>
+                          setViewImageIndex((prev) =>
+                            prev === 0 ? selectedProperty.photos!.length - 1 : prev - 1
+                          )
+                        }
                       >
-                        <ChevronLeft className="h-5 w-5" />
-                      </button>
-                      <button
-                        onClick={() => setViewImageIndex((prev) => (prev === selectedProperty.photos.length - 1 ? 0 : prev + 1))}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white p-1 rounded-full hover:bg-black/80"
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2"
+                        onClick={() =>
+                          setViewImageIndex((prev) =>
+                            prev === selectedProperty.photos!.length - 1 ? 0 : prev + 1
+                          )
+                        }
                       >
-                        <ChevronRight className="h-5 w-5" />
-                      </button>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
                       <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex gap-1">
-                        {selectedProperty.photos.map((_, idx) => (
+                        {selectedProperty.photos.map((_, index) => (
                           <button
-                            key={idx}
-                            onClick={() => setViewImageIndex(idx)}
+                            key={index}
                             className={cn(
-                              "w-2 h-2 rounded-full transition-colors",
-                              idx === viewImageIndex ? "bg-white" : "bg-white/50"
+                              'w-2 h-2 rounded-full transition-colors',
+                              index === viewImageIndex
+                                ? 'bg-primary'
+                                : 'bg-white/50 hover:bg-white/80'
                             )}
+                            onClick={() => setViewImageIndex(index)}
                           />
                         ))}
                       </div>
                     </>
                   )}
                 </div>
-              ) : (
-                <div className="h-32 bg-muted rounded-lg flex items-center justify-center">
-                  <Home className="h-12 w-12 text-muted-foreground/50" />
-                </div>
               )}
 
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold text-foreground">
-                    {selectedProperty.type}
-                  </h3>
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <MapPin className="h-4 w-4" />
-                    {selectedProperty.location}
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-2xl font-bold text-foreground">
+                      {selectedProperty.type}
+                    </h3>
+                    <div className="flex items-center gap-1 text-muted-foreground mt-1">
+                      <MapPin className="h-4 w-4" />
+                      {selectedProperty.location}
+                    </div>
                   </div>
-                </div>
-                <StatusBadge
-                  status={selectedProperty.status}
-                  variant={getStatusVariant(selectedProperty.status)}
-                />
-              </div>
 
-              <div className="text-2xl font-bold text-primary">
-                NPR {selectedProperty.rentAmount.toLocaleString()}
-                <span className="text-sm font-normal text-muted-foreground">/month</span>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Landlord</p>
-                  <p className="font-medium">{selectedProperty.landlordInfo.fullName}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Contact</p>
-                  <p className="font-medium">{selectedProperty.landlordInfo.phone}</p>
-                </div>
-              </div>
-
-              {selectedProperty.facilities.length > 0 && (
-                <div>
-                  <p className="text-muted-foreground text-sm mb-2">Facilities</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedProperty.facilities.map((facility) => (
-                      <span
-                        key={facility}
-                        className="px-3 py-1 text-sm bg-secondary rounded-md text-secondary-foreground"
-                      >
-                        {facility}
+                  <div>
+                    <p className="text-3xl font-bold text-primary">
+                      NPR {selectedProperty.rent_amount.toLocaleString()}
+                      <span className="text-base font-normal text-muted-foreground">
+                        /month
                       </span>
-                    ))}
+                    </p>
                   </div>
+
+                  <StatusBadge
+                    status={selectedProperty.status}
+                    variant={getStatusVariant(selectedProperty.status)}
+                  />
                 </div>
-              )}
+
+                <div className="space-y-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Landlord</p>
+                    <p className="font-medium">{selectedProperty.landlord_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedProperty.landlord_phone}
+                    </p>
+                  </div>
+
+                  {selectedProperty.facilities && selectedProperty.facilities.length > 0 && (
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">Facilities</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedProperty.facilities.map((facility) => {
+                          const Icon = facilityIcons[facility] || Droplets;
+                          return (
+                            <span
+                              key={facility}
+                              className="inline-flex items-center gap-1 px-2 py-1 text-sm bg-muted rounded-md"
+                            >
+                              <Icon className="h-4 w-4" />
+                              {facility}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
 
               {selectedProperty.description && (
                 <div>
-                  <p className="text-muted-foreground text-sm mb-1">Description</p>
+                  <p className="text-sm text-muted-foreground mb-1">Description</p>
                   <p className="text-foreground">{selectedProperty.description}</p>
                 </div>
               )}

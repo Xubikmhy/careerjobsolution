@@ -6,24 +6,35 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import {
-  getAgencySettings,
-  saveAgencySettings,
-  convertFileToBase64,
-  AgencySettings,
-} from '@/utils/agencySettings';
+import { useAgencySettings } from '@/hooks/useAgencySettings';
+import { convertFileToBase64 } from '@/utils/agencySettings';
 
 export default function Settings() {
-  const [settings, setSettings] = useState<AgencySettings>(getAgencySettings());
+  const { settings, isLoading, updateSettings } = useAgencySettings();
+  const [localSettings, setLocalSettings] = useState({
+    agencyName: '',
+    phone: '',
+    address: '',
+    email: '',
+    logoUrl: '',
+  });
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const stored = getAgencySettings();
-    setSettings(stored);
-    setLogoPreview(stored.logoUrl || stored.logoBase64);
-  }, []);
+    if (settings) {
+      setLocalSettings({
+        agencyName: settings.agency_name || 'Career Job Solution',
+        phone: settings.phone || '',
+        address: settings.address || '',
+        email: settings.email || '',
+        logoUrl: settings.logo_url || '',
+      });
+      setLogoPreview(settings.logo_url);
+    }
+  }, [settings]);
 
   const handleLogoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -50,7 +61,7 @@ export default function Settings() {
     try {
       const base64 = await convertFileToBase64(file);
       setLogoPreview(base64);
-      setSettings((prev) => ({ ...prev, logoBase64: base64, logoUrl: base64 }));
+      setLocalSettings((prev) => ({ ...prev, logoUrl: base64 }));
       toast({
         title: 'Logo uploaded',
         description: 'Click Save to apply changes',
@@ -66,19 +77,36 @@ export default function Settings() {
 
   const handleRemoveLogo = () => {
     setLogoPreview(null);
-    setSettings((prev) => ({ ...prev, logoBase64: null, logoUrl: null }));
+    setLocalSettings((prev) => ({ ...prev, logoUrl: '' }));
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
   };
 
   const handleSave = () => {
-    saveAgencySettings(settings);
-    toast({
-      title: 'Settings saved',
-      description: 'Your agency settings have been updated. Refresh the page to see changes.',
+    updateSettings.mutate({
+      agency_name: localSettings.agencyName,
+      phone: localSettings.phone,
+      address: localSettings.address,
+      email: localSettings.email,
+      logo_url: localSettings.logoUrl || null,
     });
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <PageHeader
+          title="Settings"
+          description="Manage your agency branding and configuration"
+        />
+        <div className="grid gap-6 max-w-2xl">
+          <Skeleton className="h-48 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -151,9 +179,9 @@ export default function Settings() {
               <Label htmlFor="agencyName">Agency Name</Label>
               <Input
                 id="agencyName"
-                value={settings.agencyName}
+                value={localSettings.agencyName}
                 onChange={(e) =>
-                  setSettings((prev) => ({ ...prev, agencyName: e.target.value }))
+                  setLocalSettings((prev) => ({ ...prev, agencyName: e.target.value }))
                 }
               />
             </div>
@@ -162,9 +190,9 @@ export default function Settings() {
                 <Label htmlFor="phone">Phone</Label>
                 <Input
                   id="phone"
-                  value={settings.phone}
+                  value={localSettings.phone}
                   onChange={(e) =>
-                    setSettings((prev) => ({ ...prev, phone: e.target.value }))
+                    setLocalSettings((prev) => ({ ...prev, phone: e.target.value }))
                   }
                 />
               </div>
@@ -173,9 +201,9 @@ export default function Settings() {
                 <Input
                   id="email"
                   type="email"
-                  value={settings.email}
+                  value={localSettings.email}
                   onChange={(e) =>
-                    setSettings((prev) => ({ ...prev, email: e.target.value }))
+                    setLocalSettings((prev) => ({ ...prev, email: e.target.value }))
                   }
                 />
               </div>
@@ -184,9 +212,9 @@ export default function Settings() {
               <Label htmlFor="address">Address</Label>
               <Input
                 id="address"
-                value={settings.address}
+                value={localSettings.address}
                 onChange={(e) =>
-                  setSettings((prev) => ({ ...prev, address: e.target.value }))
+                  setLocalSettings((prev) => ({ ...prev, address: e.target.value }))
                 }
               />
             </div>
@@ -195,9 +223,9 @@ export default function Settings() {
 
         {/* Save Button */}
         <div className="flex justify-end">
-          <Button onClick={handleSave} size="lg">
+          <Button onClick={handleSave} size="lg" disabled={updateSettings.isPending}>
             <Save className="h-4 w-4 mr-2" />
-            Save Settings
+            {updateSettings.isPending ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
       </div>
