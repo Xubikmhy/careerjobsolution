@@ -7,7 +7,6 @@ import {
   Briefcase,
   Home,
   Filter,
-  Download,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -15,6 +14,7 @@ import { StatCard } from '@/components/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -37,8 +37,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
-import { mockTransactions, getDashboardStats } from '@/data/mockData';
-import { Transaction, TransactionType, FEES } from '@/types';
+import { useTransactions } from '@/hooks/useTransactions';
+import { TransactionType, FEES } from '@/types';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -58,12 +58,10 @@ const transactionTypeIcons: Record<TransactionType, React.ElementType> = {
 };
 
 const Accounting = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const { transactions, isLoading, addTransaction } = useTransactions();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-
-  const stats = getDashboardStats();
 
   const [formData, setFormData] = useState({
     type: 'form_fee' as TransactionType,
@@ -78,22 +76,24 @@ const Accounting = () => {
       .filter((t) => {
         const matchesType = typeFilter === 'all' || t.type === typeFilter;
         const matchesSearch =
-          t.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (t.relatedName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+          (t.description?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false) ||
+          (t.related_name?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
         return matchesType && matchesSearch;
       })
-      .sort((a, b) => b.date.getTime() - a.date.getTime());
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, typeFilter, searchQuery]);
 
   const totalByType = useMemo(() => {
     return transactions.reduce(
       (acc, t) => {
-        acc[t.type] = (acc[t.type] || 0) + t.amount;
+        acc[t.type as TransactionType] = (acc[t.type as TransactionType] || 0) + t.amount;
         return acc;
       },
       {} as Record<TransactionType, number>
     );
   }, [transactions]);
+
+  const totalRevenue = transactions.reduce((sum, t) => sum + t.amount, 0);
 
   const handleAddTransaction = () => {
     if (!formData.amount || !formData.relatedName) {
@@ -105,18 +105,16 @@ const Accounting = () => {
       return;
     }
 
-    const newTransaction: Transaction = {
-      id: String(Date.now()),
+    addTransaction.mutate({
       type: formData.type,
-      description:
-        formData.description || transactionTypeLabels[formData.type],
+      description: formData.description || transactionTypeLabels[formData.type],
       amount: parseFloat(formData.amount),
-      relatedName: formData.relatedName,
-      date: new Date(),
-      notes: formData.notes || undefined,
-    };
+      related_name: formData.relatedName,
+      related_id: null,
+      date: new Date().toISOString().split('T')[0],
+      notes: formData.notes || null,
+    });
 
-    setTransactions([newTransaction, ...transactions]);
     setIsFormOpen(false);
     setFormData({
       type: 'form_fee',
@@ -124,11 +122,6 @@ const Accounting = () => {
       amount: '',
       relatedName: '',
       notes: '',
-    });
-
-    toast({
-      title: 'Transaction Added',
-      description: `NPR ${newTransaction.amount.toLocaleString()} recorded successfully.`,
     });
   };
 
@@ -144,6 +137,24 @@ const Accounting = () => {
       description: transactionTypeLabels[type],
     }));
   };
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <PageHeader
+          title="Accounting"
+          description="Track all agency revenue and transactions"
+          icon={Receipt}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          {[1, 2, 3, 4].map((i) => (
+            <Skeleton key={i} className="h-32 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-96 rounded-xl" />
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -162,7 +173,7 @@ const Accounting = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           title="Total Revenue"
-          value={`NPR ${stats.totalRevenue.toLocaleString()}`}
+          value={`NPR ${totalRevenue.toLocaleString()}`}
           icon={TrendingUp}
           variant="primary"
         />
@@ -235,11 +246,11 @@ const Accounting = () => {
               </TableRow>
             ) : (
               filteredTransactions.map((transaction) => {
-                const Icon = transactionTypeIcons[transaction.type];
+                const Icon = transactionTypeIcons[transaction.type as TransactionType] || FileText;
                 return (
                   <TableRow key={transaction.id} className="hover:bg-muted/50">
                     <TableCell className="text-muted-foreground">
-                      {format(transaction.date, 'MMM d, yyyy')}
+                      {format(new Date(transaction.date), 'MMM d, yyyy')}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -263,7 +274,7 @@ const Accounting = () => {
                           />
                         </div>
                         <span className="text-sm font-medium">
-                          {transactionTypeLabels[transaction.type]}
+                          {transactionTypeLabels[transaction.type as TransactionType] || transaction.type}
                         </span>
                       </div>
                     </TableCell>
@@ -271,7 +282,7 @@ const Accounting = () => {
                       {transaction.description}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {transaction.relatedName || '-'}
+                      {transaction.related_name || '-'}
                     </TableCell>
                     <TableCell className="text-right font-semibold text-success">
                       +NPR {transaction.amount.toLocaleString()}
@@ -379,7 +390,9 @@ const Accounting = () => {
               <Button variant="outline" onClick={() => setIsFormOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddTransaction}>Add Transaction</Button>
+              <Button onClick={handleAddTransaction} disabled={addTransaction.isPending}>
+                {addTransaction.isPending ? 'Adding...' : 'Add Transaction'}
+              </Button>
             </div>
           </div>
         </DialogContent>

@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -23,17 +24,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { mockJobReqs, mockCandidates } from '@/data/mockData';
-import { JobReq, Candidate, EmployerInfo } from '@/types';
+import { useJobs, JobDB } from '@/hooks/useJobs';
+import { useCandidates } from '@/hooks/useCandidates';
 import { toast } from '@/hooks/use-toast';
 
 const Jobs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [jobs, setJobs] = useState<JobReq[]>(mockJobReqs);
+  const { jobs, isLoading, addJob, deleteJob } = useJobs();
+  const { candidates } = useCandidates();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedJob, setSelectedJob] = useState<JobReq | null>(null);
+  const [selectedJob, setSelectedJob] = useState<JobDB | null>(null);
   const [isMatchOpen, setIsMatchOpen] = useState(false);
 
   // Auto-open form when action=add is in URL
@@ -46,16 +48,14 @@ const Jobs = () => {
   }, [searchParams, setSearchParams]);
 
   const [formData, setFormData] = useState({
-    // Employer info (inline)
     companyName: '',
     contactPerson: '',
     employerPhone: '',
     employerLocation: '',
-    // Job info
     roleTitle: '',
     salaryMin: '',
     salaryMax: '',
-    timing: 'Day' as JobReq['timing'],
+    timing: 'Day' as string,
     location: '',
     requiredSkills: [] as string[],
     remarks: '',
@@ -65,9 +65,9 @@ const Jobs = () => {
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
       const matchesSearch =
-        job.roleTitle.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        job.employerInfo.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        job.location.toLowerCase().includes(searchQuery.toLowerCase());
+        job.role_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        job.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (job.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
 
       const matchesStatus = statusFilter === 'all' || job.status === statusFilter;
 
@@ -76,19 +76,19 @@ const Jobs = () => {
   }, [jobs, searchQuery, statusFilter]);
 
   // Smart Match Logic
-  const getMatchingCandidates = (job: JobReq): Candidate[] => {
-    return mockCandidates.filter((candidate) => {
+  const getMatchingCandidates = (job: JobDB) => {
+    return candidates.filter((candidate) => {
       if (candidate.status !== 'Active') return false;
 
-      const hasMatchingSkill = job.requiredSkills.some((reqSkill) =>
-        candidate.skills.some(
+      const hasMatchingSkill = (job.required_skills || []).some((reqSkill) =>
+        (candidate.skills || []).some(
           (candSkill) =>
             candSkill.toLowerCase().includes(reqSkill.toLowerCase()) ||
             reqSkill.toLowerCase().includes(candSkill.toLowerCase())
         )
       );
 
-      const salaryMatch = candidate.expectedSalary <= job.salaryMax;
+      const salaryMatch = candidate.expected_salary <= job.salary_max;
 
       return hasMatchingSkill && salaryMatch;
     });
@@ -115,28 +115,21 @@ const Jobs = () => {
       return;
     }
 
-    const employerInfo: EmployerInfo = {
-      companyName: formData.companyName,
-      contactPerson: formData.contactPerson,
-      phone: formData.employerPhone,
-      location: formData.employerLocation,
-    };
-
-    const newJob: JobReq = {
-      id: String(Date.now()),
-      employerInfo,
-      roleTitle: formData.roleTitle,
-      requiredSkills: formData.requiredSkills,
-      salaryMin: parseInt(formData.salaryMin),
-      salaryMax: parseInt(formData.salaryMax) || parseInt(formData.salaryMin),
+    addJob.mutate({
+      company_name: formData.companyName,
+      contact_person: formData.contactPerson || null,
+      employer_phone: formData.employerPhone || null,
+      employer_location: formData.employerLocation || null,
+      role_title: formData.roleTitle,
+      required_skills: formData.requiredSkills,
+      salary_min: parseInt(formData.salaryMin),
+      salary_max: parseInt(formData.salaryMax) || parseInt(formData.salaryMin),
       timing: formData.timing,
-      location: formData.location || formData.employerLocation,
+      location: formData.location || formData.employerLocation || null,
       status: 'Open',
-      remarks: formData.remarks || undefined,
-      createdAt: new Date(),
-    };
+      remarks: formData.remarks || null,
+    });
 
-    setJobs([newJob, ...jobs]);
     setIsFormOpen(false);
     setFormData({
       companyName: '',
@@ -151,22 +144,30 @@ const Jobs = () => {
       requiredSkills: [],
       remarks: '',
     });
-
-    toast({
-      title: 'Job Posted',
-      description: 'The job posting has been created successfully.',
-    });
   };
 
   const handleDeleteJob = (id: string) => {
-    setJobs(jobs.filter((j) => j.id !== id));
-    toast({
-      title: 'Job Deleted',
-      description: 'The job posting has been removed.',
-    });
+    deleteJob.mutate(id);
   };
 
   const matchingCandidates = selectedJob ? getMatchingCandidates(selectedJob) : [];
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <PageHeader
+          title="Job Openings"
+          description="Manage job postings and find matching candidates"
+          icon={Briefcase}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-48 rounded-xl" />
+          ))}
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -215,15 +216,15 @@ const Jobs = () => {
             >
               <div className="flex items-start justify-between mb-3">
                 <div>
-                  <h3 className="font-semibold text-foreground">{job.roleTitle}</h3>
-                  <p className="text-sm text-muted-foreground">{job.employerInfo.companyName}</p>
+                  <h3 className="font-semibold text-foreground">{job.role_title}</h3>
+                  <p className="text-sm text-muted-foreground">{job.company_name}</p>
                 </div>
                 <StatusBadge status={job.status} variant={getStatusVariant(job.status)} />
               </div>
 
               <div className="space-y-2 mb-4">
                 <p className="text-lg font-bold text-success">
-                  NPR {job.salaryMin.toLocaleString()} - {job.salaryMax.toLocaleString()}
+                  NPR {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
                 </p>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <span>{job.location}</span>
@@ -232,7 +233,7 @@ const Jobs = () => {
                 </div>
               </div>
 
-              <SkillTagList skills={job.requiredSkills} max={3} className="mb-4" />
+              <SkillTagList skills={job.required_skills || []} max={3} className="mb-4" />
 
               <div className="flex gap-2 pt-3 border-t border-border">
                 <Button
@@ -361,7 +362,7 @@ const Jobs = () => {
                 <Select
                   value={formData.timing}
                   onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, timing: value as JobReq['timing'] }))
+                    setFormData((prev) => ({ ...prev, timing: value }))
                   }
                 >
                   <SelectTrigger>
@@ -445,7 +446,9 @@ const Jobs = () => {
               <Button variant="outline" onClick={() => setIsFormOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddJob}>Post Job</Button>
+              <Button onClick={handleAddJob} disabled={addJob.isPending}>
+                {addJob.isPending ? 'Posting...' : 'Post Job'}
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -465,14 +468,14 @@ const Jobs = () => {
             <div className="space-y-4">
               {/* Job Summary */}
               <div className="bg-muted/50 rounded-lg p-4">
-                <h4 className="font-medium text-foreground">{selectedJob.roleTitle}</h4>
-                <p className="text-sm text-muted-foreground">{selectedJob.employerInfo.companyName}</p>
+                <h4 className="font-medium text-foreground">{selectedJob.role_title}</h4>
+                <p className="text-sm text-muted-foreground">{selectedJob.company_name}</p>
                 <div className="flex items-center gap-2 mt-2">
                   <span className="text-sm text-success font-medium">
-                    NPR {selectedJob.salaryMin.toLocaleString()} - {selectedJob.salaryMax.toLocaleString()}
+                    NPR {selectedJob.salary_min.toLocaleString()} - {selectedJob.salary_max.toLocaleString()}
                   </span>
                   <span className="text-muted-foreground">•</span>
-                  <SkillTagList skills={selectedJob.requiredSkills} max={5} />
+                  <SkillTagList skills={selectedJob.required_skills || []} max={5} />
                 </div>
               </div>
 
@@ -491,23 +494,22 @@ const Jobs = () => {
                   {matchingCandidates.map((candidate) => (
                     <div
                       key={candidate.id}
-                      className="bg-card border border-border rounded-lg p-4 hover:shadow-md transition-shadow"
+                      className="p-4 bg-card rounded-lg border border-border"
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h4 className="font-medium text-foreground">{candidate.fullName}</h4>
-                          <p className="text-sm text-muted-foreground">{candidate.address}</p>
+                          <h5 className="font-medium text-foreground">{candidate.full_name}</h5>
+                          <p className="text-sm text-muted-foreground">
+                            {candidate.experience_years} yrs experience • NPR{' '}
+                            {candidate.expected_salary.toLocaleString()} expected
+                          </p>
                         </div>
-                        <span className="text-sm font-medium text-primary">
-                          NPR {candidate.expectedSalary.toLocaleString()}
-                        </span>
+                        <StatusBadge
+                          status={candidate.status}
+                          variant={getStatusVariant(candidate.status)}
+                        />
                       </div>
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground mb-2">
-                        <span>{candidate.experienceYears} yrs exp</span>
-                        <span>•</span>
-                        <span>{candidate.educationLevel}</span>
-                      </div>
-                      <SkillTagList skills={candidate.skills} max={5} />
+                      <SkillTagList skills={candidate.skills || []} max={5} />
                     </div>
                   ))}
                 </div>

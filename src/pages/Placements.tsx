@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   Trophy,
   Plus,
@@ -14,6 +14,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -30,22 +31,22 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { StatusBadge } from '@/components/StatusBadge';
-import {
-  mockPlacements,
-  mockRentalPlacements,
-  mockCandidates,
-  mockJobReqs,
-  mockTenants,
-  mockProperties,
-} from '@/data/mockData';
-import { Placement, RentalPlacement, FEES } from '@/types';
+import { usePlacements } from '@/hooks/usePlacements';
+import { useCandidates } from '@/hooks/useCandidates';
+import { useJobs } from '@/hooks/useJobs';
+import { useTenants } from '@/hooks/useTenants';
+import { useProperties } from '@/hooks/useProperties';
+import { FEES } from '@/types';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
-import { cn } from '@/lib/utils';
 
 const Placements = () => {
-  const [placements, setPlacements] = useState<Placement[]>(mockPlacements);
-  const [rentalPlacements, setRentalPlacements] = useState<RentalPlacement[]>(mockRentalPlacements);
+  const { placements, isLoading: placementsLoading, addPlacement, updatePlacement } = usePlacements();
+  const { candidates } = useCandidates();
+  const { jobs } = useJobs();
+  const { tenants } = useTenants();
+  const { properties } = useProperties();
+  
   const [isJobFormOpen, setIsJobFormOpen] = useState(false);
   const [isRentalFormOpen, setIsRentalFormOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('jobs');
@@ -64,9 +65,9 @@ const Placements = () => {
     notes: '',
   });
 
-  const activeCandidates = mockCandidates.filter((c) => c.status === 'Active');
-  const openJobs = mockJobReqs.filter((j) => j.status === 'Open');
-  const vacantProperties = mockProperties.filter((p) => p.status === 'Vacant');
+  const activeCandidates = candidates.filter((c) => c.status === 'Active');
+  const openJobs = jobs.filter((j) => j.status === 'Open');
+  const vacantProperties = properties.filter((p) => p.status === 'Vacant');
 
   const handleAddJobPlacement = () => {
     if (!jobFormData.candidateId || !jobFormData.jobId || !jobFormData.agreedSalary) {
@@ -78,34 +79,27 @@ const Placements = () => {
       return;
     }
 
-    const candidate = mockCandidates.find((c) => c.id === jobFormData.candidateId);
-    const job = mockJobReqs.find((j) => j.id === jobFormData.jobId);
+    const candidate = candidates.find((c) => c.id === jobFormData.candidateId);
+    const job = jobs.find((j) => j.id === jobFormData.jobId);
     const salary = parseFloat(jobFormData.agreedSalary);
     const commission = Math.round(salary * (FEES.JOB_COMMISSION_PERCENT / 100));
 
-    const newPlacement: Placement = {
-      id: String(Date.now()),
-      candidateId: jobFormData.candidateId,
-      candidateName: candidate?.fullName || '',
-      jobId: jobFormData.jobId,
-      jobTitle: job?.roleTitle || '',
-      employerName: job?.employerInfo.companyName || '',
-      placedDate: new Date(),
-      agreedSalary: salary,
-      commissionAmount: commission,
-      commissionPaid: false,
-      notes: jobFormData.notes || undefined,
-      followUpDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 1 week later
-    };
+    addPlacement.mutate({
+      candidate_id: jobFormData.candidateId,
+      job_id: jobFormData.jobId,
+      candidate_name: candidate?.full_name || null,
+      job_title: job?.role_title || null,
+      employer_name: job?.company_name || null,
+      placed_date: new Date().toISOString().split('T')[0],
+      agreed_salary: salary,
+      commission_amount: commission,
+      commission_paid: false,
+      notes: jobFormData.notes || null,
+      follow_up_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    });
 
-    setPlacements([newPlacement, ...placements]);
     setIsJobFormOpen(false);
     setJobFormData({ candidateId: '', jobId: '', agreedSalary: '', notes: '' });
-
-    toast({
-      title: 'Placement Recorded',
-      description: `${candidate?.fullName} placed at ${job?.employerInfo.companyName}. Commission: NPR ${commission.toLocaleString()}`,
-    });
   };
 
   const handleAddRentalPlacement = () => {
@@ -118,53 +112,56 @@ const Placements = () => {
       return;
     }
 
-    const tenant = mockTenants.find((t) => t.id === rentalFormData.tenantId);
-    const property = mockProperties.find((p) => p.id === rentalFormData.propertyId);
+    const tenant = tenants.find((t) => t.id === rentalFormData.tenantId);
+    const property = properties.find((p) => p.id === rentalFormData.propertyId);
 
-    const newRentalPlacement: RentalPlacement = {
-      id: String(Date.now()),
-      tenantId: rentalFormData.tenantId,
-      tenantName: tenant?.fullName || '',
-      propertyId: rentalFormData.propertyId,
-      propertyType: property?.type || '',
-      landlordName: property?.landlordInfo.fullName || '',
-      rentStartDate: new Date(),
-      monthlyRent: property?.rentAmount || 0,
-      commissionAmount: parseFloat(rentalFormData.commissionAmount),
-      commissionPaid: false,
-      notes: rentalFormData.notes || undefined,
-      followUpDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    };
+    // For now, we'll store rental placements in the same placements table
+    // In a full implementation, you might want a separate rental_placements table
+    addPlacement.mutate({
+      candidate_id: null,
+      job_id: null,
+      candidate_name: tenant?.full_name || null,
+      job_title: `${property?.type} at ${property?.location}` || null,
+      employer_name: property?.landlord_name || null,
+      placed_date: new Date().toISOString().split('T')[0],
+      agreed_salary: property?.rent_amount || 0,
+      commission_amount: parseFloat(rentalFormData.commissionAmount),
+      commission_paid: false,
+      notes: rentalFormData.notes || null,
+      follow_up_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    });
 
-    setRentalPlacements([newRentalPlacement, ...rentalPlacements]);
     setIsRentalFormOpen(false);
     setRentalFormData({ tenantId: '', propertyId: '', commissionAmount: '', notes: '' });
+  };
 
-    toast({
-      title: 'Rental Recorded',
-      description: `${tenant?.fullName} placed at ${property?.location}. Commission: NPR ${parseFloat(rentalFormData.commissionAmount).toLocaleString()}`,
+  const toggleCommissionPaid = (id: string, currentPaid: boolean) => {
+    updatePlacement.mutate({
+      id,
+      commission_paid: !currentPaid,
     });
   };
 
-  const toggleCommissionPaid = (id: string, type: 'job' | 'rental') => {
-    if (type === 'job') {
-      setPlacements(
-        placements.map((p) =>
-          p.id === id ? { ...p, commissionPaid: !p.commissionPaid } : p
-        )
-      );
-    } else {
-      setRentalPlacements(
-        rentalPlacements.map((r) =>
-          r.id === id ? { ...r, commissionPaid: !r.commissionPaid } : r
-        )
-      );
-    }
-    toast({
-      title: 'Status Updated',
-      description: 'Commission payment status updated.',
-    });
-  };
+  if (placementsLoading) {
+    return (
+      <DashboardLayout>
+        <PageHeader
+          title="Placements"
+          description="Track successful job and rental placements"
+          icon={Trophy}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-48 rounded-xl" />
+          ))}
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  // Separate job placements (those with job_id) and rental placements
+  const jobPlacements = placements.filter(p => p.job_id);
+  const rentalPlacements = placements.filter(p => !p.job_id);
 
   return (
     <DashboardLayout>
@@ -199,13 +196,13 @@ const Placements = () => {
 
         {/* Job Placements */}
         <TabsContent value="jobs" className="space-y-4">
-          {placements.length === 0 ? (
+          {jobPlacements.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground bg-card rounded-xl border border-border">
               No job placements recorded yet
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {placements.map((placement, index) => (
+              {jobPlacements.map((placement, index) => (
                 <div
                   key={placement.id}
                   className="bg-card rounded-xl border border-border p-5 hover:shadow-md transition-all duration-300 animate-fade-in"
@@ -213,30 +210,30 @@ const Placements = () => {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="font-semibold text-foreground">{placement.candidateName}</h3>
-                      <p className="text-sm text-muted-foreground">{placement.jobTitle}</p>
+                      <h3 className="font-semibold text-foreground">{placement.candidate_name}</h3>
+                      <p className="text-sm text-muted-foreground">{placement.job_title}</p>
                     </div>
                     <StatusBadge
-                      status={placement.commissionPaid ? 'Paid' : 'Pending'}
-                      variant={placement.commissionPaid ? 'success' : 'warning'}
+                      status={placement.commission_paid ? 'Paid' : 'Pending'}
+                      variant={placement.commission_paid ? 'success' : 'warning'}
                     />
                   </div>
 
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center gap-2 text-sm">
                       <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{placement.employerName}</span>
+                      <span className="text-muted-foreground">{placement.employer_name}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">
-                        {format(placement.placedDate, 'MMM d, yyyy')}
+                        {format(new Date(placement.placed_date), 'MMM d, yyyy')}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">
-                        Salary: NPR {placement.agreedSalary.toLocaleString()}
+                        Salary: NPR {placement.agreed_salary.toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -244,7 +241,7 @@ const Placements = () => {
                   <div className="p-3 bg-success/10 rounded-lg mb-4">
                     <p className="text-xs text-muted-foreground">Commission (30%)</p>
                     <p className="text-lg font-bold text-success">
-                      NPR {placement.commissionAmount.toLocaleString()}
+                      NPR {placement.commission_amount.toLocaleString()}
                     </p>
                   </div>
 
@@ -255,12 +252,13 @@ const Placements = () => {
                   )}
 
                   <Button
-                    variant={placement.commissionPaid ? 'outline' : 'default'}
+                    variant={placement.commission_paid ? 'outline' : 'default'}
                     size="sm"
                     className="w-full"
-                    onClick={() => toggleCommissionPaid(placement.id, 'job')}
+                    onClick={() => toggleCommissionPaid(placement.id, placement.commission_paid)}
+                    disabled={updatePlacement.isPending}
                   >
-                    {placement.commissionPaid ? (
+                    {placement.commission_paid ? (
                       <>
                         <CheckCircle2 className="h-4 w-4 mr-2" />
                         Commission Paid
@@ -294,30 +292,30 @@ const Placements = () => {
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div>
-                      <h3 className="font-semibold text-foreground">{rental.tenantName}</h3>
-                      <p className="text-sm text-muted-foreground">{rental.propertyType}</p>
+                      <h3 className="font-semibold text-foreground">{rental.candidate_name}</h3>
+                      <p className="text-sm text-muted-foreground">{rental.job_title}</p>
                     </div>
                     <StatusBadge
-                      status={rental.commissionPaid ? 'Paid' : 'Pending'}
-                      variant={rental.commissionPaid ? 'success' : 'warning'}
+                      status={rental.commission_paid ? 'Paid' : 'Pending'}
+                      variant={rental.commission_paid ? 'success' : 'warning'}
                     />
                   </div>
 
                   <div className="space-y-2 mb-4">
                     <div className="flex items-center gap-2 text-sm">
                       <Home className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{rental.landlordName}</span>
+                      <span className="text-muted-foreground">{rental.employer_name}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">
-                        {format(rental.rentStartDate, 'MMM d, yyyy')}
+                        {format(new Date(rental.placed_date), 'MMM d, yyyy')}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                       <span className="text-muted-foreground">
-                        Rent: NPR {rental.monthlyRent.toLocaleString()}/mo
+                        Rent: NPR {rental.agreed_salary.toLocaleString()}/mo
                       </span>
                     </div>
                   </div>
@@ -325,7 +323,7 @@ const Placements = () => {
                   <div className="p-3 bg-primary/10 rounded-lg mb-4">
                     <p className="text-xs text-muted-foreground">Commission</p>
                     <p className="text-lg font-bold text-primary">
-                      NPR {rental.commissionAmount.toLocaleString()}
+                      NPR {rental.commission_amount.toLocaleString()}
                     </p>
                   </div>
 
@@ -336,12 +334,13 @@ const Placements = () => {
                   )}
 
                   <Button
-                    variant={rental.commissionPaid ? 'outline' : 'default'}
+                    variant={rental.commission_paid ? 'outline' : 'default'}
                     size="sm"
                     className="w-full"
-                    onClick={() => toggleCommissionPaid(rental.id, 'rental')}
+                    onClick={() => toggleCommissionPaid(rental.id, rental.commission_paid)}
+                    disabled={updatePlacement.isPending}
                   >
-                    {rental.commissionPaid ? (
+                    {rental.commission_paid ? (
                       <>
                         <CheckCircle2 className="h-4 w-4 mr-2" />
                         Commission Paid
@@ -380,7 +379,7 @@ const Placements = () => {
                 <SelectContent>
                   {activeCandidates.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.fullName}
+                      {c.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -399,7 +398,7 @@ const Placements = () => {
                 <SelectContent>
                   {openJobs.map((j) => (
                     <SelectItem key={j.id} value={j.id}>
-                      {j.roleTitle} - {j.employerInfo.companyName}
+                      {j.role_title} - {j.company_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -439,7 +438,9 @@ const Placements = () => {
               <Button variant="outline" onClick={() => setIsJobFormOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddJobPlacement}>Record Placement</Button>
+              <Button onClick={handleAddJobPlacement} disabled={addPlacement.isPending}>
+                {addPlacement.isPending ? 'Recording...' : 'Record Placement'}
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -463,9 +464,9 @@ const Placements = () => {
                   <SelectValue placeholder="Select tenant" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockTenants.map((t) => (
+                  {tenants.map((t) => (
                     <SelectItem key={t.id} value={t.id}>
-                      {t.fullName}
+                      {t.full_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -484,7 +485,7 @@ const Placements = () => {
                 <SelectContent>
                   {vacantProperties.map((p) => (
                     <SelectItem key={p.id} value={p.id}>
-                      {p.type} - {p.location} (NPR {p.rentAmount.toLocaleString()}/mo)
+                      {p.type} - {p.location} (NPR {p.rent_amount.toLocaleString()}/mo)
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -501,9 +502,6 @@ const Placements = () => {
                 }
                 placeholder="Enter commission amount"
               />
-              <p className="text-xs text-muted-foreground">
-                Enter the agreed commission amount (flexible)
-              </p>
             </div>
 
             <div className="space-y-2">
@@ -521,7 +519,9 @@ const Placements = () => {
               <Button variant="outline" onClick={() => setIsRentalFormOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleAddRentalPlacement}>Record Placement</Button>
+              <Button onClick={handleAddRentalPlacement} disabled={addPlacement.isPending}>
+                {addPlacement.isPending ? 'Recording...' : 'Record Placement'}
+              </Button>
             </div>
           </div>
         </DialogContent>
