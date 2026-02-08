@@ -8,6 +8,8 @@ import {
   Clock,
   Building2,
   Home,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -31,38 +33,37 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { StatusBadge } from '@/components/StatusBadge';
-import { usePlacements } from '@/hooks/usePlacements';
+import { PlacementEditModal } from '@/components/PlacementEditModal';
+import { usePlacements, PlacementDB } from '@/hooks/usePlacements';
 import { useCandidates } from '@/hooks/useCandidates';
 import { useJobs } from '@/hooks/useJobs';
 import { useTenants } from '@/hooks/useTenants';
 import { useProperties } from '@/hooks/useProperties';
 import { FEES } from '@/types';
 import { toast } from '@/hooks/use-toast';
+import { toast as sonnerToast } from 'sonner';
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
 
 const Placements = () => {
-  const { placements, isLoading: placementsLoading, addPlacement, updatePlacement } = usePlacements();
+  const { placements, isLoading: placementsLoading, addPlacement, updatePlacement, deletePlacement } = usePlacements();
   const { candidates } = useCandidates();
   const { jobs } = useJobs();
   const { tenants } = useTenants();
   const { properties } = useProperties();
-  
+
   const [isJobFormOpen, setIsJobFormOpen] = useState(false);
   const [isRentalFormOpen, setIsRentalFormOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('jobs');
+  const [editPlacement, setEditPlacement] = useState<PlacementDB | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
   const [jobFormData, setJobFormData] = useState({
-    candidateId: '',
-    jobId: '',
-    agreedSalary: '',
-    notes: '',
+    candidateId: '', jobId: '', agreedSalary: '', notes: '',
   });
 
   const [rentalFormData, setRentalFormData] = useState({
-    tenantId: '',
-    propertyId: '',
-    commissionAmount: '',
-    notes: '',
+    tenantId: '', propertyId: '', commissionAmount: '', notes: '',
   });
 
   const activeCandidates = candidates.filter((c) => c.status === 'Active');
@@ -71,14 +72,9 @@ const Placements = () => {
 
   const handleAddJobPlacement = () => {
     if (!jobFormData.candidateId || !jobFormData.jobId || !jobFormData.agreedSalary) {
-      toast({
-        title: 'Missing Fields',
-        description: 'Please fill in all required fields',
-        variant: 'destructive',
-      });
+      toast({ title: 'Missing Fields', description: 'Please fill in all required fields', variant: 'destructive' });
       return;
     }
-
     const candidate = candidates.find((c) => c.id === jobFormData.candidateId);
     const job = jobs.find((j) => j.id === jobFormData.jobId);
     const salary = parseFloat(jobFormData.agreedSalary);
@@ -97,26 +93,18 @@ const Placements = () => {
       notes: jobFormData.notes || null,
       follow_up_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
-
     setIsJobFormOpen(false);
     setJobFormData({ candidateId: '', jobId: '', agreedSalary: '', notes: '' });
   };
 
   const handleAddRentalPlacement = () => {
     if (!rentalFormData.tenantId || !rentalFormData.propertyId || !rentalFormData.commissionAmount) {
-      toast({
-        title: 'Missing Fields',
-        description: 'Please fill in all required fields',
-        variant: 'destructive',
-      });
+      toast({ title: 'Missing Fields', description: 'Please fill in all required fields', variant: 'destructive' });
       return;
     }
-
     const tenant = tenants.find((t) => t.id === rentalFormData.tenantId);
     const property = properties.find((p) => p.id === rentalFormData.propertyId);
 
-    // For now, we'll store rental placements in the same placements table
-    // In a full implementation, you might want a separate rental_placements table
     addPlacement.mutate({
       candidate_id: null,
       job_id: null,
@@ -130,317 +118,191 @@ const Placements = () => {
       notes: rentalFormData.notes || null,
       follow_up_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     });
-
     setIsRentalFormOpen(false);
     setRentalFormData({ tenantId: '', propertyId: '', commissionAmount: '', notes: '' });
   };
 
   const toggleCommissionPaid = (id: string, currentPaid: boolean) => {
-    updatePlacement.mutate({
-      id,
-      commission_paid: !currentPaid,
+    updatePlacement.mutate({ id, commission_paid: !currentPaid });
+  };
+
+  const handleEditSave = (data: Partial<PlacementDB> & { id: string }) => {
+    updatePlacement.mutate(data, {
+      onSuccess: () => {
+        setIsEditOpen(false);
+        setEditPlacement(null);
+        sonnerToast.success('Placement updated!');
+      },
     });
+  };
+
+  const handleDelete = (id: string) => {
+    if (confirm('Delete this placement?')) {
+      deletePlacement.mutate(id);
+    }
   };
 
   if (placementsLoading) {
     return (
       <DashboardLayout>
-        <PageHeader
-          title="Placements"
-          description="Track successful job and rental placements"
-          icon={Trophy}
-        />
+        <PageHeader title="Placements" description="Track successful job and rental placements" icon={Trophy} />
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-48 rounded-xl" />
-          ))}
+          {[1, 2, 3, 4, 5, 6].map((i) => (<Skeleton key={i} className="h-48 rounded-xl" />))}
         </div>
       </DashboardLayout>
     );
   }
 
-  // Separate job placements (those with job_id) and rental placements
   const jobPlacements = placements.filter(p => p.job_id);
   const rentalPlacements = placements.filter(p => !p.job_id);
 
+  const renderPlacementCard = (placement: PlacementDB, index: number, isRental: boolean) => (
+    <motion.div
+      key={placement.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      className="bg-card rounded-xl border border-border p-5 hover:shadow-lg transition-shadow"
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h3 className="font-semibold text-foreground">{placement.candidate_name}</h3>
+          <p className="text-sm text-muted-foreground">{placement.job_title}</p>
+        </div>
+        <StatusBadge
+          status={placement.commission_paid ? 'Paid' : 'Pending'}
+          variant={placement.commission_paid ? 'success' : 'warning'}
+        />
+      </div>
+
+      <div className="space-y-2 mb-4">
+        <div className="flex items-center gap-2 text-sm">
+          {isRental ? <Home className="h-4 w-4 text-muted-foreground" /> : <Building2 className="h-4 w-4 text-muted-foreground" />}
+          <span className="text-muted-foreground">{placement.employer_name}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">{format(new Date(placement.placed_date), 'MMM d, yyyy')}</span>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+          <span className="text-muted-foreground">
+            {isRental ? 'Rent' : 'Salary'}: NPR {placement.agreed_salary.toLocaleString()}{isRental ? '/mo' : ''}
+          </span>
+        </div>
+      </div>
+
+      <div className={`p-3 ${isRental ? 'bg-primary/10' : 'bg-success/10'} rounded-lg mb-4`}>
+        <p className="text-xs text-muted-foreground">Commission{!isRental && ' (30%)'}</p>
+        <p className={`text-lg font-bold ${isRental ? 'text-primary' : 'text-success'}`}>
+          NPR {placement.commission_amount.toLocaleString()}
+        </p>
+      </div>
+
+      {placement.notes && (
+        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{placement.notes}</p>
+      )}
+
+      <div className="flex gap-2 pt-3 border-t border-border">
+        <Button
+          variant={placement.commission_paid ? 'outline' : 'default'}
+          size="sm"
+          className="flex-1"
+          onClick={() => toggleCommissionPaid(placement.id, placement.commission_paid)}
+          disabled={updatePlacement.isPending}
+        >
+          {placement.commission_paid ? (
+            <><CheckCircle2 className="h-4 w-4 mr-1" /> Paid</>
+          ) : (
+            <><Clock className="h-4 w-4 mr-1" /> Mark Paid</>
+          )}
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => { setEditPlacement(placement); setIsEditOpen(true); }}>
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => handleDelete(placement.id)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </motion.div>
+  );
+
   return (
     <DashboardLayout>
-      <PageHeader
-        title="Placements"
-        description="Track successful job and rental placements"
-        icon={Trophy}
-      />
+      <PageHeader title="Placements" description="Track successful job and rental placements" icon={Trophy} />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-3">
           <TabsList>
-            <TabsTrigger value="jobs" className="gap-2">
-              <Building2 className="h-4 w-4" />
-              Job Placements
-            </TabsTrigger>
-            <TabsTrigger value="rentals" className="gap-2">
-              <Home className="h-4 w-4" />
-              Rental Placements
-            </TabsTrigger>
+            <TabsTrigger value="jobs" className="gap-2"><Building2 className="h-4 w-4" />Job Placements</TabsTrigger>
+            <TabsTrigger value="rentals" className="gap-2"><Home className="h-4 w-4" />Rental Placements</TabsTrigger>
           </TabsList>
-
-          <Button
-            onClick={() =>
-              activeTab === 'jobs' ? setIsJobFormOpen(true) : setIsRentalFormOpen(true)
-            }
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add {activeTab === 'jobs' ? 'Job' : 'Rental'} Placement
+          <Button onClick={() => activeTab === 'jobs' ? setIsJobFormOpen(true) : setIsRentalFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />Add {activeTab === 'jobs' ? 'Job' : 'Rental'} Placement
           </Button>
         </div>
 
-        {/* Job Placements */}
         <TabsContent value="jobs" className="space-y-4">
           {jobPlacements.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground bg-card rounded-xl border border-border">
-              No job placements recorded yet
-            </div>
+            <div className="text-center py-12 text-muted-foreground bg-card rounded-xl border border-border">No job placements recorded yet</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {jobPlacements.map((placement, index) => (
-                <div
-                  key={placement.id}
-                  className="bg-card rounded-xl border border-border p-5 hover:shadow-md transition-all duration-300 animate-fade-in"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{placement.candidate_name}</h3>
-                      <p className="text-sm text-muted-foreground">{placement.job_title}</p>
-                    </div>
-                    <StatusBadge
-                      status={placement.commission_paid ? 'Paid' : 'Pending'}
-                      variant={placement.commission_paid ? 'success' : 'warning'}
-                    />
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Building2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{placement.employer_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {format(new Date(placement.placed_date), 'MMM d, yyyy')}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        Salary: NPR {placement.agreed_salary.toLocaleString()}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-success/10 rounded-lg mb-4">
-                    <p className="text-xs text-muted-foreground">Commission (30%)</p>
-                    <p className="text-lg font-bold text-success">
-                      NPR {placement.commission_amount.toLocaleString()}
-                    </p>
-                  </div>
-
-                  {placement.notes && (
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                      {placement.notes}
-                    </p>
-                  )}
-
-                  <Button
-                    variant={placement.commission_paid ? 'outline' : 'default'}
-                    size="sm"
-                    className="w-full"
-                    onClick={() => toggleCommissionPaid(placement.id, placement.commission_paid)}
-                    disabled={updatePlacement.isPending}
-                  >
-                    {placement.commission_paid ? (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Commission Paid
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="h-4 w-4 mr-2" />
-                        Mark as Paid
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ))}
+              {jobPlacements.map((p, i) => renderPlacementCard(p, i, false))}
             </div>
           )}
         </TabsContent>
 
-        {/* Rental Placements */}
         <TabsContent value="rentals" className="space-y-4">
           {rentalPlacements.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground bg-card rounded-xl border border-border">
-              No rental placements recorded yet
-            </div>
+            <div className="text-center py-12 text-muted-foreground bg-card rounded-xl border border-border">No rental placements recorded yet</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {rentalPlacements.map((rental, index) => (
-                <div
-                  key={rental.id}
-                  className="bg-card rounded-xl border border-border p-5 hover:shadow-md transition-all duration-300 animate-fade-in"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{rental.candidate_name}</h3>
-                      <p className="text-sm text-muted-foreground">{rental.job_title}</p>
-                    </div>
-                    <StatusBadge
-                      status={rental.commission_paid ? 'Paid' : 'Pending'}
-                      variant={rental.commission_paid ? 'success' : 'warning'}
-                    />
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center gap-2 text-sm">
-                      <Home className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">{rental.employer_name}</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <Calendar className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        {format(new Date(rental.placed_date), 'MMM d, yyyy')}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-muted-foreground">
-                        Rent: NPR {rental.agreed_salary.toLocaleString()}/mo
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="p-3 bg-primary/10 rounded-lg mb-4">
-                    <p className="text-xs text-muted-foreground">Commission</p>
-                    <p className="text-lg font-bold text-primary">
-                      NPR {rental.commission_amount.toLocaleString()}
-                    </p>
-                  </div>
-
-                  {rental.notes && (
-                    <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-                      {rental.notes}
-                    </p>
-                  )}
-
-                  <Button
-                    variant={rental.commission_paid ? 'outline' : 'default'}
-                    size="sm"
-                    className="w-full"
-                    onClick={() => toggleCommissionPaid(rental.id, rental.commission_paid)}
-                    disabled={updatePlacement.isPending}
-                  >
-                    {rental.commission_paid ? (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 mr-2" />
-                        Commission Paid
-                      </>
-                    ) : (
-                      <>
-                        <Clock className="h-4 w-4 mr-2" />
-                        Mark as Paid
-                      </>
-                    )}
-                  </Button>
-                </div>
-              ))}
+              {rentalPlacements.map((p, i) => renderPlacementCard(p, i, true))}
             </div>
           )}
         </TabsContent>
       </Tabs>
 
+      {/* Edit Modal */}
+      <PlacementEditModal
+        placement={editPlacement}
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        onSave={handleEditSave}
+        isPending={updatePlacement.isPending}
+      />
+
       {/* Add Job Placement Modal */}
       <Dialog open={isJobFormOpen} onOpenChange={setIsJobFormOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Record Job Placement</DialogTitle>
-          </DialogHeader>
-
+          <DialogHeader><DialogTitle>Record Job Placement</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Candidate</Label>
-              <Select
-                value={jobFormData.candidateId}
-                onValueChange={(v) => setJobFormData((prev) => ({ ...prev, candidateId: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select candidate" />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeCandidates.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <Select value={jobFormData.candidateId} onValueChange={(v) => setJobFormData(p => ({ ...p, candidateId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select candidate" /></SelectTrigger>
+                <SelectContent>{activeCandidates.map((c) => (<SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>))}</SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label>Job Position</Label>
-              <Select
-                value={jobFormData.jobId}
-                onValueChange={(v) => setJobFormData((prev) => ({ ...prev, jobId: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select job" />
-                </SelectTrigger>
-                <SelectContent>
-                  {openJobs.map((j) => (
-                    <SelectItem key={j.id} value={j.id}>
-                      {j.role_title} - {j.company_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <Select value={jobFormData.jobId} onValueChange={(v) => setJobFormData(p => ({ ...p, jobId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select job" /></SelectTrigger>
+                <SelectContent>{openJobs.map((j) => (<SelectItem key={j.id} value={j.id}>{j.role_title} - {j.company_name}</SelectItem>))}</SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label>Agreed Salary (NPR)</Label>
-              <Input
-                type="number"
-                value={jobFormData.agreedSalary}
-                onChange={(e) =>
-                  setJobFormData((prev) => ({ ...prev, agreedSalary: e.target.value }))
-                }
-                placeholder="e.g., 20000"
-              />
+              <Input type="number" value={jobFormData.agreedSalary} onChange={(e) => setJobFormData(p => ({ ...p, agreedSalary: e.target.value }))} placeholder="e.g., 20000" />
               {jobFormData.agreedSalary && (
-                <p className="text-sm text-success">
-                  Commission (30%): NPR{' '}
-                  {Math.round(
-                    parseFloat(jobFormData.agreedSalary) * (FEES.JOB_COMMISSION_PERCENT / 100)
-                  ).toLocaleString()}
-                </p>
+                <p className="text-sm text-success">Commission (30%): NPR {Math.round(parseFloat(jobFormData.agreedSalary) * (FEES.JOB_COMMISSION_PERCENT / 100)).toLocaleString()}</p>
               )}
             </div>
-
-            <div className="space-y-2">
-              <Label>Notes (Optional)</Label>
-              <Textarea
-                value={jobFormData.notes}
-                onChange={(e) => setJobFormData((prev) => ({ ...prev, notes: e.target.value }))}
-                placeholder="Any additional notes..."
-              />
-            </div>
-
+            <div className="space-y-2"><Label>Notes (Optional)</Label><Textarea value={jobFormData.notes} onChange={(e) => setJobFormData(p => ({ ...p, notes: e.target.value }))} placeholder="Any additional notes..." /></div>
             <div className="flex justify-end gap-3 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setIsJobFormOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddJobPlacement} disabled={addPlacement.isPending}>
-                {addPlacement.isPending ? 'Recording...' : 'Record Placement'}
-              </Button>
+              <Button variant="outline" onClick={() => setIsJobFormOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddJobPlacement} disabled={addPlacement.isPending}>{addPlacement.isPending ? 'Recording...' : 'Record Placement'}</Button>
             </div>
           </div>
         </DialogContent>
@@ -449,79 +311,27 @@ const Placements = () => {
       {/* Add Rental Placement Modal */}
       <Dialog open={isRentalFormOpen} onOpenChange={setIsRentalFormOpen}>
         <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Record Rental Placement</DialogTitle>
-          </DialogHeader>
-
+          <DialogHeader><DialogTitle>Record Rental Placement</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Tenant</Label>
-              <Select
-                value={rentalFormData.tenantId}
-                onValueChange={(v) => setRentalFormData((prev) => ({ ...prev, tenantId: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select tenant" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tenants.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <Select value={rentalFormData.tenantId} onValueChange={(v) => setRentalFormData(p => ({ ...p, tenantId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select tenant" /></SelectTrigger>
+                <SelectContent>{tenants.map((t) => (<SelectItem key={t.id} value={t.id}>{t.full_name}</SelectItem>))}</SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
               <Label>Property</Label>
-              <Select
-                value={rentalFormData.propertyId}
-                onValueChange={(v) => setRentalFormData((prev) => ({ ...prev, propertyId: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select property" />
-                </SelectTrigger>
-                <SelectContent>
-                  {vacantProperties.map((p) => (
-                    <SelectItem key={p.id} value={p.id}>
-                      {p.type} - {p.location} (NPR {p.rent_amount.toLocaleString()}/mo)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+              <Select value={rentalFormData.propertyId} onValueChange={(v) => setRentalFormData(p => ({ ...p, propertyId: v }))}>
+                <SelectTrigger><SelectValue placeholder="Select property" /></SelectTrigger>
+                <SelectContent>{vacantProperties.map((p) => (<SelectItem key={p.id} value={p.id}>{p.type} - {p.location} (NPR {p.rent_amount.toLocaleString()}/mo)</SelectItem>))}</SelectContent>
               </Select>
             </div>
-
-            <div className="space-y-2">
-              <Label>Commission Amount (NPR)</Label>
-              <Input
-                type="number"
-                value={rentalFormData.commissionAmount}
-                onChange={(e) =>
-                  setRentalFormData((prev) => ({ ...prev, commissionAmount: e.target.value }))
-                }
-                placeholder="Enter commission amount"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Notes (Optional)</Label>
-              <Textarea
-                value={rentalFormData.notes}
-                onChange={(e) =>
-                  setRentalFormData((prev) => ({ ...prev, notes: e.target.value }))
-                }
-                placeholder="Any additional notes..."
-              />
-            </div>
-
+            <div className="space-y-2"><Label>Commission Amount (NPR)</Label><Input type="number" value={rentalFormData.commissionAmount} onChange={(e) => setRentalFormData(p => ({ ...p, commissionAmount: e.target.value }))} placeholder="Enter commission amount" /></div>
+            <div className="space-y-2"><Label>Notes (Optional)</Label><Textarea value={rentalFormData.notes} onChange={(e) => setRentalFormData(p => ({ ...p, notes: e.target.value }))} placeholder="Any additional notes..." /></div>
             <div className="flex justify-end gap-3 pt-4 border-t border-border">
-              <Button variant="outline" onClick={() => setIsRentalFormOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleAddRentalPlacement} disabled={addPlacement.isPending}>
-                {addPlacement.isPending ? 'Recording...' : 'Record Placement'}
-              </Button>
+              <Button variant="outline" onClick={() => setIsRentalFormOpen(false)}>Cancel</Button>
+              <Button onClick={handleAddRentalPlacement} disabled={addPlacement.isPending}>{addPlacement.isPending ? 'Recording...' : 'Record Placement'}</Button>
             </div>
           </div>
         </DialogContent>
