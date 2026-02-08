@@ -75,11 +75,30 @@ export function usePlacements() {
     },
   });
 
+  const deletePlacement = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('placements')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['placements'] });
+      toast.success('Placement deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete placement: ${error.message}`);
+    },
+  });
+
   return {
     placements,
     isLoading,
     error,
     addPlacement,
     updatePlacement,
+    deletePlacement,
   };
 }

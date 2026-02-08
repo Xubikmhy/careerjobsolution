@@ -12,10 +12,16 @@ import {
   Settings,
   Building2,
   FileText,
+  Sparkles,
+  LogOut,
 } from 'lucide-react';
 import { SidebarNavLink } from './SidebarNavLink';
+import { DarkModeToggle } from './DarkModeToggle';
 import { cn } from '@/lib/utils';
 import { getAgencySettings } from '@/utils/agencySettings';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const recruitmentLinks = [
   { to: '/candidates', icon: Users, label: 'Candidates' },
@@ -33,18 +39,25 @@ const operationsLinks = [
 ];
 
 const servicesLinks = [
-  { to: '/cv-generate', icon: FileText, label: 'CV Generate' },
+  { to: '/cv-generate', icon: Sparkles, label: 'AI CV Builder' },
 ];
 
 export function AppSidebar() {
   const [isOpen, setIsOpen] = useState(true);
   const location = useLocation();
+  const navigate = useNavigate();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const settings = getAgencySettings();
     setLogoUrl(settings.logoUrl);
   }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    toast.success('Logged out successfully');
+    navigate('/auth');
+  };
 
   return (
     <>
@@ -186,16 +199,26 @@ export function AppSidebar() {
           </nav>
 
           {/* Footer */}
-          <div className="px-4 py-4 border-t border-sidebar-border">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
-                <span className="text-sm font-medium text-sidebar-foreground">A</span>
+          <div className="px-4 py-4 border-t border-sidebar-border space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-sidebar-accent flex items-center justify-center">
+                  <span className="text-sm font-medium text-sidebar-foreground">A</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-sidebar-foreground">Admin</p>
+                  <p className="text-xs text-sidebar-muted">Agency Staff</p>
+                </div>
               </div>
-              <div>
-                <p className="text-sm font-medium text-sidebar-foreground">Admin</p>
-                <p className="text-xs text-sidebar-muted">Agency Staff</p>
-              </div>
+              <DarkModeToggle />
             </div>
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-lg transition-colors"
+            >
+              <LogOut className="h-4 w-4" />
+              Logout
+            </button>
           </div>
         </div>
       </aside>
