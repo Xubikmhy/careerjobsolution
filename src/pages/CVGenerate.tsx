@@ -5,25 +5,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
-import { FileText, Download, Users, Sparkles, Eye, Loader2 } from 'lucide-react';
+import { FileText, Download, Users, Sparkles, Eye, Loader2, UserPlus } from 'lucide-react';
 import { useCandidates, CandidateDB } from '@/hooks/useCandidates';
 import { CVData, TemplateId, TEMPLATES, generateCV } from '@/components/CVTemplates';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { NewCandidateCVForm, defaultNewCandidate, NewCandidateData } from '@/components/NewCandidateCVForm';
 
 const CVGenerate = () => {
-  const { candidates, isLoading } = useCandidates();
+  const { candidates, isLoading, addCandidate } = useCandidates();
+  const [mode, setMode] = useState<'existing' | 'new'>('existing');
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>('professional');
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [enhancedData, setEnhancedData] = useState<Partial<CVData> | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [newCandidateData, setNewCandidateData] = useState<NewCandidateData>({ ...defaultNewCandidate });
+  const [isSaving, setIsSaving] = useState(false);
 
-  const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
+  const selectedCandidate = mode === 'existing' ? candidates.find(c => c.id === selectedCandidateId) : null;
 
-  const buildCVData = (candidate: CandidateDB, enhanced?: Partial<CVData> | null): CVData => ({
+  const isNewCandidateValid = mode === 'new' && newCandidateData.full_name.length >= 2 && newCandidateData.phone.length >= 10;
+  const canAct = mode === 'existing' ? !!selectedCandidateId : isNewCandidateValid;
+
+  const buildCVDataFromCandidate = (candidate: CandidateDB, enhanced?: Partial<CVData> | null): CVData => ({
     fullName: candidate.full_name,
     phone: candidate.phone,
     address: candidate.address || '',
@@ -42,25 +50,57 @@ const CVGenerate = () => {
     references: candidate.reference_info || undefined,
   });
 
+  const buildCVDataFromNew = (d: NewCandidateData, enhanced?: Partial<CVData> | null): CVData => ({
+    fullName: d.full_name,
+    phone: d.phone,
+    address: d.address || '',
+    dateOfBirth: d.date_of_birth || undefined,
+    nationality: d.nationality || 'Nepali',
+    maritalStatus: d.marital_status || undefined,
+    languages: d.languages || [],
+    educationLevel: d.education_level || '',
+    experienceYears: d.experience_years,
+    expectedSalary: d.expected_salary,
+    skills: enhanced?.enhancedSkills || d.skills || [],
+    careerObjective: enhanced?.careerObjective || d.career_objective || undefined,
+    professionalSummary: enhanced?.professionalSummary || undefined,
+    workExperiences: enhanced?.workExperiences || undefined,
+    declaration: enhanced?.declaration || undefined,
+    references: d.reference_info || undefined,
+  });
+
+  const getCVData = (enhanced?: Partial<CVData> | null): CVData | null => {
+    if (mode === 'existing' && selectedCandidate) return buildCVDataFromCandidate(selectedCandidate, enhanced);
+    if (mode === 'new' && isNewCandidateValid) return buildCVDataFromNew(newCandidateData, enhanced);
+    return null;
+  };
+
+  const getCandidatePayload = (): any => {
+    if (mode === 'existing' && selectedCandidate) return selectedCandidate;
+    if (mode === 'new') return newCandidateData;
+    return null;
+  };
+
   const handleEnhanceWithAI = async () => {
-    if (!selectedCandidate) return;
+    const payload = getCandidatePayload();
+    if (!payload) return;
     setIsEnhancing(true);
     try {
       const { data, error } = await supabase.functions.invoke('enhance-cv', {
         body: {
           candidate: {
-            fullName: selectedCandidate.full_name,
-            phone: selectedCandidate.phone,
-            address: selectedCandidate.address,
-            experienceYears: selectedCandidate.experience_years,
-            educationLevel: selectedCandidate.education_level,
-            skills: selectedCandidate.skills,
-            expectedSalary: selectedCandidate.expected_salary,
-            nationality: selectedCandidate.nationality,
-            languages: selectedCandidate.languages,
-            careerObjective: selectedCandidate.career_objective,
-            dateOfBirth: selectedCandidate.date_of_birth,
-            maritalStatus: selectedCandidate.marital_status,
+            fullName: payload.full_name,
+            phone: payload.phone,
+            address: payload.address,
+            experienceYears: payload.experience_years,
+            educationLevel: payload.education_level,
+            skills: payload.skills,
+            expectedSalary: payload.expected_salary,
+            nationality: payload.nationality,
+            languages: payload.languages,
+            careerObjective: payload.career_objective,
+            dateOfBirth: payload.date_of_birth,
+            maritalStatus: payload.marital_status,
           },
           template: selectedTemplate,
         },
@@ -77,20 +117,38 @@ const CVGenerate = () => {
   };
 
   const handlePreview = () => {
-    if (!selectedCandidate) return;
-    const cvData = buildCVData(selectedCandidate, enhancedData);
+    const cvData = getCVData(enhancedData);
+    if (!cvData) return;
     const doc = generateCV(cvData, selectedTemplate);
     const blob = doc.output('blob');
     const url = URL.createObjectURL(blob);
     setPreviewUrl(url);
   };
 
-  const handleDownload = () => {
-    if (!selectedCandidate) return;
-    const cvData = buildCVData(selectedCandidate, enhancedData);
+  const handleDownload = async () => {
+    const cvData = getCVData(enhancedData);
+    if (!cvData) return;
     const doc = generateCV(cvData, selectedTemplate);
-    doc.save(`CV_${selectedCandidate.full_name.replace(/\s+/g, '_')}.pdf`);
-    toast.success(`CV downloaded for ${selectedCandidate.full_name}`);
+    const name = cvData.fullName;
+    doc.save(`CV_${name.replace(/\s+/g, '_')}.pdf`);
+    toast.success(`CV downloaded for ${name}`);
+
+    // Auto-save new candidate to database
+    if (mode === 'new' && isNewCandidateValid) {
+      setIsSaving(true);
+      try {
+        await addCandidate.mutateAsync(newCandidateData);
+        toast.success(`${newCandidateData.full_name} has been added as a candidate!`);
+        setNewCandidateData({ ...defaultNewCandidate });
+        setMode('existing');
+        setEnhancedData(null);
+        setPreviewUrl(null);
+      } catch (e: any) {
+        toast.error(`CV downloaded but failed to save candidate: ${e.message}`);
+      } finally {
+        setIsSaving(false);
+      }
+    }
   };
 
   if (isLoading) {
@@ -114,25 +172,50 @@ const CVGenerate = () => {
         <div className="space-y-6">
           {/* Candidate Selection */}
           <Card>
-            <CardHeader>
+            <CardHeader className="pb-3">
               <CardTitle className="flex items-center gap-2 text-base">
                 <Users className="h-5 w-5 text-primary" />
-                Select Candidate
+                Candidate
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Select value={selectedCandidateId} onValueChange={(v) => { setSelectedCandidateId(v); setEnhancedData(null); setPreviewUrl(null); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a candidate..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {candidates.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.full_name} — {(c.skills || [])[0] || 'No skills'}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Tabs value={mode} onValueChange={(v) => { setMode(v as 'existing' | 'new'); setEnhancedData(null); setPreviewUrl(null); }}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="existing" className="gap-1.5 text-xs">
+                    <Users className="h-3.5 w-3.5" /> Existing
+                  </TabsTrigger>
+                  <TabsTrigger value="new" className="gap-1.5 text-xs">
+                    <UserPlus className="h-3.5 w-3.5" /> New
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              <AnimatePresence mode="wait">
+                {mode === 'existing' ? (
+                  <motion.div key="existing" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 10 }}>
+                    <Select value={selectedCandidateId} onValueChange={(v) => { setSelectedCandidateId(v); setEnhancedData(null); setPreviewUrl(null); }}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose a candidate..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {candidates.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.full_name} — {(c.skills || [])[0] || 'No skills'}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </motion.div>
+                ) : (
+                  <motion.div key="new" initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }}>
+                    <NewCandidateCVForm data={newCandidateData} onChange={setNewCandidateData} />
+                    <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
+                      <UserPlus className="h-3 w-3" />
+                      Candidate will be auto-saved on download
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </CardContent>
           </Card>
 
@@ -174,7 +257,7 @@ const CVGenerate = () => {
             <CardContent className="pt-6 space-y-3">
               <Button
                 onClick={handleEnhanceWithAI}
-                disabled={!selectedCandidateId || isEnhancing}
+                disabled={!canAct || isEnhancing}
                 className="w-full gap-2"
                 variant="outline"
               >
@@ -192,7 +275,7 @@ const CVGenerate = () => {
               </Button>
               <Button
                 onClick={handlePreview}
-                disabled={!selectedCandidateId}
+                disabled={!canAct}
                 variant="outline"
                 className="w-full gap-2"
               >
@@ -201,11 +284,20 @@ const CVGenerate = () => {
               </Button>
               <Button
                 onClick={handleDownload}
-                disabled={!selectedCandidateId}
+                disabled={!canAct || isSaving}
                 className="w-full gap-2"
               >
-                <Download className="h-4 w-4" />
-                Download PDF
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving Candidate...
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-4 w-4" />
+                    {mode === 'new' ? 'Download & Save Candidate' : 'Download PDF'}
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -222,40 +314,51 @@ const CVGenerate = () => {
             </CardHeader>
             <CardContent>
               <AnimatePresence mode="wait">
-                {selectedCandidate ? (
+                {(selectedCandidate || (mode === 'new' && isNewCandidateValid)) ? (
                   <motion.div
-                    key={selectedCandidate.id}
+                    key={mode === 'new' ? 'new-candidate' : selectedCandidate?.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     className="space-y-4"
                   >
-                    <div>
-                      <p className="text-sm text-muted-foreground">Full Name</p>
-                      <p className="font-semibold text-foreground">{selectedCandidate.full_name}</p>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-sm text-muted-foreground">Experience</p>
-                        <p className="font-medium">{selectedCandidate.experience_years} years</p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-muted-foreground">Education</p>
-                        <p className="font-medium">{selectedCandidate.education_level || 'N/A'}</p>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Skills</p>
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {(selectedCandidate.skills || []).map((skill, i) => (
-                          <Badge key={i} variant="secondary" className="text-xs">{skill}</Badge>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Expected Salary</p>
-                      <p className="font-semibold text-success">NPR {selectedCandidate.expected_salary.toLocaleString()}</p>
-                    </div>
+                    {(() => {
+                      const c = mode === 'existing' && selectedCandidate
+                        ? selectedCandidate
+                        : { ...newCandidateData, id: 'new' } as CandidateDB & { id: string };
+                      return (
+                        <>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Full Name</p>
+                            <p className="font-semibold text-foreground">{c.full_name}</p>
+                            {mode === 'new' && <Badge variant="outline" className="text-xs mt-1">New Candidate</Badge>}
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <p className="text-sm text-muted-foreground">Experience</p>
+                              <p className="font-medium">{c.experience_years} years</p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-muted-foreground">Education</p>
+                              <p className="font-medium">{c.education_level || 'N/A'}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Skills</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {(c.skills || []).map((skill, i) => (
+                                <Badge key={i} variant="secondary" className="text-xs">{skill}</Badge>
+                              ))}
+                              {(c.skills || []).length === 0 && <p className="text-xs text-muted-foreground">No skills added</p>}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-sm text-muted-foreground">Expected Salary</p>
+                            <p className="font-semibold text-success">NPR {c.expected_salary.toLocaleString()}</p>
+                          </div>
+                        </>
+                      );
+                    })()}
 
                     {enhancedData && (
                       <motion.div
@@ -292,7 +395,7 @@ const CVGenerate = () => {
                     className="text-center py-8 text-muted-foreground"
                   >
                     <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                    <p>Select a candidate to preview</p>
+                    <p>{mode === 'new' ? 'Fill in candidate details' : 'Select a candidate to preview'}</p>
                   </motion.div>
                 )}
               </AnimatePresence>
