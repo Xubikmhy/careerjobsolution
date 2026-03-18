@@ -176,6 +176,7 @@ const Candidates = () => {
               <TableHead className="hidden sm:table-cell">Experience</TableHead>
               <TableHead>Salary</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="hidden md:table-cell">Registered</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
