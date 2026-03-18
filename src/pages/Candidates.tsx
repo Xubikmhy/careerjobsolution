@@ -214,6 +214,9 @@ const Candidates = () => {
                       variant={getStatusVariant(candidate.status)}
                     />
                   </TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                    {candidate.created_at ? format(new Date(candidate.created_at), 'MMM d, yyyy') : '-'}
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
                       <Button

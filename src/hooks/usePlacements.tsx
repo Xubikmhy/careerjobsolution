@@ -45,8 +45,18 @@ export function usePlacements() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      // Auto-update candidate status to 'Placed' and job status to 'Filled'
+      if (data.candidate_id) {
+        await supabase.from('candidates').update({ status: 'Placed' }).eq('id', data.candidate_id);
+        queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      }
+      if (data.job_id) {
+        await supabase.from('job_requirements').update({ status: 'Filled' }).eq('id', data.job_id);
+        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      }
       queryClient.invalidateQueries({ queryKey: ['placements'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
       toast.success('Placement recorded successfully');
     },
     onError: (error: Error) => {
