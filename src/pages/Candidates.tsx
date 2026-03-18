@@ -27,6 +27,7 @@ import { useCandidates, CandidateDB } from '@/hooks/useCandidates';
 import { Candidate } from '@/types';
 import { generateCandidateCV } from '@/utils/pdfGenerator';
 import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 const Candidates = () => {
   const [searchParams, setSearchParams] = useSearchParams();
