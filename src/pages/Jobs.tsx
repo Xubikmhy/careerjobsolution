@@ -211,6 +211,8 @@ const Jobs = () => {
                   <span>{job.location}</span>
                   <span>•</span>
                   <span>{job.timing}</span>
+                  <span>•</span>
+                  <span>{job.created_at ? format(new Date(job.created_at), 'MMM d, yyyy') : ''}</span>
                 </div>
               </div>
 
