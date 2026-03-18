@@ -32,6 +32,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { format } from 'date-fns';
 
 const Jobs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
