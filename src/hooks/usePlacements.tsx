@@ -45,8 +45,25 @@ export function usePlacements() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: async (data) => {
+      // Auto-update candidate status to 'Placed' and job status to 'Filled'
+      if (data.candidate_id) {
+        await supabase.from('candidates').update({ status: 'Placed' }).eq('id', data.candidate_id);
+        queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      }
+      if (data.job_id) {
+        await supabase.from('job_requirements').update({ status: 'Filled' }).eq('id', data.job_id);
+        queryClient.invalidateQueries({ queryKey: ['jobs'] });
+      }
+      // For rental placements, update property status to 'Occupied'
+      const propertyId = (data as any).property_id;
+      if (!data.job_id && !data.candidate_id) {
+        // Rental placement - try to find and update the property via notes or related data
+        queryClient.invalidateQueries({ queryKey: ['properties'] });
+        queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      }
       queryClient.invalidateQueries({ queryKey: ['placements'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
       toast.success('Placement recorded successfully');
     },
     onError: (error: Error) => {

@@ -32,6 +32,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { toast as sonnerToast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { format } from 'date-fns';
 
 const Jobs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -177,7 +178,7 @@ const Jobs = () => {
         searchPlaceholder="Search by role, company, or location..."
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Closed', label: 'Closed' }] }]}
+        filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Filled', label: 'Filled' }, { value: 'Closed', label: 'Closed' }] }]}
         className="mb-6"
       />
 
@@ -211,6 +212,8 @@ const Jobs = () => {
                   <span>{job.location}</span>
                   <span>•</span>
                   <span>{job.timing}</span>
+                  <span>•</span>
+                  <span>{job.created_at ? format(new Date(job.created_at), 'MMM d, yyyy') : ''}</span>
                 </div>
               </div>
 

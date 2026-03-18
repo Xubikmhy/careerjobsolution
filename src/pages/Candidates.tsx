@@ -27,6 +27,7 @@ import { useCandidates, CandidateDB } from '@/hooks/useCandidates';
 import { Candidate } from '@/types';
 import { generateCandidateCV } from '@/utils/pdfGenerator';
 import { toast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 const Candidates = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -175,13 +176,14 @@ const Candidates = () => {
               <TableHead className="hidden sm:table-cell">Experience</TableHead>
               <TableHead>Salary</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead className="hidden md:table-cell">Registered</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredCandidates.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                   No candidates found
                 </TableCell>
               </TableRow>
@@ -211,6 +213,9 @@ const Candidates = () => {
                       status={candidate.status}
                       variant={getStatusVariant(candidate.status)}
                     />
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
+                    {candidate.created_at ? format(new Date(candidate.created_at), 'MMM d, yyyy') : '-'}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">

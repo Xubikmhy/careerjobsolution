@@ -97,7 +97,7 @@ const Placements = () => {
     setJobFormData({ candidateId: '', jobId: '', agreedSalary: '', notes: '' });
   };
 
-  const handleAddRentalPlacement = () => {
+  const handleAddRentalPlacement = async () => {
     if (!rentalFormData.tenantId || !rentalFormData.propertyId || !rentalFormData.commissionAmount) {
       toast({ title: 'Missing Fields', description: 'Please fill in all required fields', variant: 'destructive' });
       return;
@@ -117,6 +117,14 @@ const Placements = () => {
       commission_paid: false,
       notes: rentalFormData.notes || null,
       follow_up_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    }, {
+      onSuccess: async () => {
+        // Update property status to Occupied
+        if (rentalFormData.propertyId) {
+          const { supabase } = await import('@/integrations/supabase/client');
+          await supabase.from('properties').update({ status: 'Occupied' }).eq('id', rentalFormData.propertyId);
+        }
+      }
     });
     setIsRentalFormOpen(false);
     setRentalFormData({ tenantId: '', propertyId: '', commissionAmount: '', notes: '' });
