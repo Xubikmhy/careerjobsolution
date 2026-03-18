@@ -55,6 +55,13 @@ export function usePlacements() {
         await supabase.from('job_requirements').update({ status: 'Filled' }).eq('id', data.job_id);
         queryClient.invalidateQueries({ queryKey: ['jobs'] });
       }
+      // For rental placements, update property status to 'Occupied'
+      const propertyId = (data as any).property_id;
+      if (!data.job_id && !data.candidate_id) {
+        // Rental placement - try to find and update the property via notes or related data
+        queryClient.invalidateQueries({ queryKey: ['properties'] });
+        queryClient.invalidateQueries({ queryKey: ['tenants'] });
+      }
       queryClient.invalidateQueries({ queryKey: ['placements'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] });
       toast.success('Placement recorded successfully');

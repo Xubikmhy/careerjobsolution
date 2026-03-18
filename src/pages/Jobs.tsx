@@ -178,7 +178,7 @@ const Jobs = () => {
         searchPlaceholder="Search by role, company, or location..."
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Closed', label: 'Closed' }] }]}
+        filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Filled', label: 'Filled' }, { value: 'Closed', label: 'Closed' }] }]}
         className="mb-6"
       />
 
