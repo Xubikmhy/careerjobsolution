@@ -18,7 +18,7 @@ export interface Candidate {
   educationLevel: string;
   expectedSalary: number;
   cvUrl?: string;
-  status: 'Active' | 'Placed';
+  status: 'Active' | 'Placed' | 'Sent for Interview';
   references?: string;
   remarks?: string;
   createdAt: Date;

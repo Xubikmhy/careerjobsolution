@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -69,6 +69,7 @@ const Jobs = () => {
     remarks: '',
   });
   const [skillInput, setSkillInput] = useState('');
+  const [groupBySkills, setGroupBySkills] = useState(false);
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -80,6 +81,16 @@ const Jobs = () => {
       return matchesSearch && matchesStatus;
     });
   }, [jobs, searchQuery, statusFilter]);
+
+  const jobSkillGroups = useMemo(() => {
+    const groups: Record<string, typeof filteredJobs> = {};
+    filteredJobs.forEach((j) => {
+      const primary = j.required_skills?.[0] || 'General';
+      if (!groups[primary]) groups[primary] = [];
+      groups[primary].push(j);
+    });
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredJobs]);
 
   const getMatchingCandidates = (job: JobDB) => {
     return candidates
@@ -154,6 +165,63 @@ const Jobs = () => {
 
   const matchingCandidates = selectedJob ? getMatchingCandidates(selectedJob) : [];
 
+  const renderJobCard = useCallback((job: JobDB, index: number) => (
+    <motion.div
+      key={job.id}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.05 }}
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      className="bg-card rounded-xl border border-border p-5 hover:shadow-lg transition-shadow cursor-pointer"
+      onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}
+    >
+      <div className="flex items-start justify-between mb-3">
+        <div>
+          <h3 className="font-semibold text-foreground">{job.role_title}</h3>
+          <p className="text-sm text-muted-foreground">{job.company_name}</p>
+        </div>
+        <StatusBadge status={job.status} variant={getStatusVariant(job.status)} />
+      </div>
+      <div className="space-y-2 mb-4">
+        <p className="text-lg font-bold text-success">
+          NPR {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
+        </p>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>{job.location}</span>
+          <span>•</span>
+          <span>{job.timing}</span>
+          <span>•</span>
+          <span>{job.created_at ? format(new Date(job.created_at), 'MMM d, yyyy') : ''}</span>
+        </div>
+      </div>
+      <SkillTagList skills={job.required_skills || []} max={3} className="mb-4" />
+      {candidates.filter(c => c.status === 'Active').length > 0 && (
+        <div className="mb-3">
+          <p className="text-xs text-muted-foreground mb-1">Top candidates matching</p>
+          <div className="flex gap-1">
+            {getMatchingCandidates(job).slice(0, 3).map(c => (
+              <Badge key={c.id} variant="secondary" className="text-xs">
+                {calculateMatchScore(c, job)}%
+              </Badge>
+            ))}
+          </div>
+        </div>
+      )}
+      <div className="flex gap-2 pt-3 border-t border-border" onClick={e => e.stopPropagation()}>
+        <Button variant="outline" size="sm" className="flex-1 gap-1" onClick={() => handleSmartMatch(job)}>
+          <Sparkles className="h-4 w-4 text-primary" />
+          AI Match
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}>
+          <Eye className="h-4 w-4" />
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => deleteJob.mutate(job.id)} className="text-destructive hover:text-destructive">
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </motion.div>
+  ), [candidates, deleteJob]);
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -179,76 +247,38 @@ const Jobs = () => {
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Filled', label: 'Filled' }, { value: 'Closed', label: 'Closed' }] }]}
-        className="mb-6"
+        className="mb-4"
       />
 
+      <div className="flex justify-end mb-4">
+        <Button variant={groupBySkills ? 'default' : 'outline'} size="sm" onClick={() => setGroupBySkills(!groupBySkills)}>
+          Group by Skill
+        </Button>
+      </div>
+
+      {groupBySkills ? (
+        <div className="space-y-8">
+          {jobSkillGroups.map(([skill, groupJobs]) => (
+            <div key={skill}>
+              <div className="flex items-center gap-2 mb-3">
+                <Badge variant="secondary" className="text-sm">{skill}</Badge>
+                <span className="text-sm text-muted-foreground">({groupJobs.length})</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {groupJobs.map((job, index) => renderJobCard(job, index))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredJobs.length === 0 ? (
           <div className="col-span-full text-center py-12 text-muted-foreground">No job postings found</div>
         ) : (
-          filteredJobs.map((job, index) => (
-            <motion.div
-              key={job.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              whileHover={{ y: -4, transition: { duration: 0.2 } }}
-              className="bg-card rounded-xl border border-border p-5 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-semibold text-foreground">{job.role_title}</h3>
-                  <p className="text-sm text-muted-foreground">{job.company_name}</p>
-                </div>
-                <StatusBadge status={job.status} variant={getStatusVariant(job.status)} />
-              </div>
-
-              <div className="space-y-2 mb-4">
-                <p className="text-lg font-bold text-success">
-                  NPR {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
-                </p>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{job.location}</span>
-                  <span>•</span>
-                  <span>{job.timing}</span>
-                  <span>•</span>
-                  <span>{job.created_at ? format(new Date(job.created_at), 'MMM d, yyyy') : ''}</span>
-                </div>
-              </div>
-
-              <SkillTagList skills={job.required_skills || []} max={3} className="mb-4" />
-
-              {/* Match score preview */}
-              {candidates.filter(c => c.status === 'Active').length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs text-muted-foreground mb-1">Top candidates matching</p>
-                  <div className="flex gap-1">
-                    {getMatchingCandidates(job).slice(0, 3).map(c => (
-                      <Badge key={c.id} variant="secondary" className="text-xs">
-                        {calculateMatchScore(c, job)}%
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-3 border-t border-border" onClick={e => e.stopPropagation()}>
-                <Button variant="outline" size="sm" className="flex-1 gap-1" onClick={() => handleSmartMatch(job)}>
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  AI Match
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}>
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => deleteJob.mutate(job.id)} className="text-destructive hover:text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </motion.div>
-          ))
+          filteredJobs.map((job, index) => renderJobCard(job, index))
         )}
       </div>
+      )}
 
       {/* Job Detail Modal */}
       <JobDetailModal
