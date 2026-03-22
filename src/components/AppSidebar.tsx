@@ -18,9 +18,6 @@ import { SidebarNavLink } from './SidebarNavLink';
 import { DarkModeToggle } from './DarkModeToggle';
 import { cn } from '@/lib/utils';
 import { getAgencySettings } from '@/utils/agencySettings';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 
 const recruitmentLinks = [
   { to: '/candidates', icon: Users, label: 'Candidates' },
