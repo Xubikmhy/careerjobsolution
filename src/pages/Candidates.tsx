@@ -158,6 +158,7 @@ const Candidates = () => {
             onChange: setStatusFilter,
             options: [
               { value: 'Active', label: 'Active' },
+              { value: 'Sent for Interview', label: 'Sent for Interview' },
               { value: 'Placed', label: 'Placed' },
             ],
           },
