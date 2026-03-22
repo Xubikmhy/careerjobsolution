@@ -13,7 +13,6 @@ import {
   Building2,
   FileText,
   Sparkles,
-  LogOut,
 } from 'lucide-react';
 import { SidebarNavLink } from './SidebarNavLink';
 import { DarkModeToggle } from './DarkModeToggle';
