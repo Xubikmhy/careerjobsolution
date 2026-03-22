@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
