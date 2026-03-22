@@ -41,19 +41,12 @@ const servicesLinks = [
 export function AppSidebar() {
   const [isOpen, setIsOpen] = useState(true);
   const location = useLocation();
-  const navigate = useNavigate();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const settings = getAgencySettings();
     setLogoUrl(settings.logoUrl);
   }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success('Logged out successfully');
-    navigate('/auth');
-  };
 
   return (
     <>
