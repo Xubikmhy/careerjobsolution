@@ -6,297 +6,272 @@ export const generateCandidateCV = (candidate: Candidate): void => {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 20;
+  const margin = 18;
   const contentWidth = pageWidth - margin * 2;
-  let yPos = 25;
+  let yPos = 20;
 
   const settings = getAgencySettings();
 
-  // Helper function for centered text
-  const centerText = (text: string, y: number, fontSize: number = 12) => {
-    doc.setFontSize(fontSize);
-    const textWidth = doc.getTextWidth(text);
-    doc.text(text, (pageWidth - textWidth) / 2, y);
+  // Colors
+  const primaryColor: [number, number, number] = [37, 99, 235]; // Blue-600
+  const darkColor: [number, number, number] = [15, 23, 42]; // Slate-900
+  const grayColor: [number, number, number] = [71, 85, 105]; // Slate-500
+  const lightGray: [number, number, number] = [148, 163, 184]; // Slate-400
+
+  const checkPageBreak = (needed: number) => {
+    if (yPos + needed > pageHeight - 25) {
+      doc.addPage();
+      addWatermark();
+      yPos = 20;
+    }
   };
 
-  // Helper to add watermark logo
   const addWatermark = () => {
     if (settings.logoBase64 || settings.logoUrl) {
       const logoData = settings.logoBase64 || settings.logoUrl;
       if (logoData) {
         try {
-          const logoSize = 80;
-          const logoX = (pageWidth - logoSize) / 2;
-          const logoY = (pageHeight - logoSize) / 2;
-          
-          // Save current state
-          const currentGState = doc.saveGraphicsState();
-          
-          // Add low opacity watermark
-          doc.setGState(doc.GState({ opacity: 0.08 }));
-          doc.addImage(logoData, 'PNG', logoX, logoY, logoSize, logoSize);
-          
-          // Restore state
+          const logoSize = 70;
+          doc.saveGraphicsState();
+          doc.setGState(doc.GState({ opacity: 0.06 }));
+          doc.addImage(logoData, 'PNG', (pageWidth - logoSize) / 2, (pageHeight - logoSize) / 2, logoSize, logoSize);
           doc.restoreGraphicsState();
-        } catch (e) {
-          console.warn('Failed to add watermark:', e);
-        }
+        } catch (e) { console.warn('Watermark failed:', e); }
       }
     }
   };
 
-  // Add watermark first (behind content)
   addWatermark();
 
-  // Header Border
-  doc.setDrawColor(40, 40, 40);
-  doc.setLineWidth(1.5);
-  doc.line(margin, 15, pageWidth - margin, 15);
+  // ─── Header: Blue accent bar ───
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, pageWidth, 8, 'F');
 
-  // Header - Name
+  yPos = 22;
+
+  // Name
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(20, 20, 20);
-  centerText(candidate.fullName.toUpperCase(), yPos, 24);
+  doc.setFontSize(26);
+  doc.setTextColor(...darkColor);
+  doc.text(candidate.fullName.toUpperCase(), margin, yPos);
   yPos += 10;
 
-  // Contact Info line
+  // Contact line with separator dots
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.setTextColor(60, 60, 60);
-  
+  doc.setTextColor(...grayColor);
   const contactParts: string[] = [];
   if (candidate.phone) contactParts.push(candidate.phone);
   if (candidate.address) contactParts.push(candidate.address);
-  
-  const contactLine = contactParts.join('  |  ');
-  centerText(contactLine, yPos, 10);
-  yPos += 8;
+  doc.text(contactParts.join('  •  '), margin, yPos);
+  yPos += 6;
 
-  // Personal details line
+  // Personal info line
   const personalParts: string[] = [];
   if (candidate.dateOfBirth) {
     const age = new Date().getFullYear() - new Date(candidate.dateOfBirth).getFullYear();
-    personalParts.push(`Age: ${age} years`);
+    personalParts.push(`Age: ${age}`);
   }
   if (candidate.nationality) personalParts.push(candidate.nationality);
   if (candidate.maritalStatus) personalParts.push(candidate.maritalStatus);
-  
   if (personalParts.length > 0) {
-    centerText(personalParts.join('  |  '), yPos, 9);
+    doc.text(personalParts.join('  •  '), margin, yPos);
     yPos += 6;
   }
 
   // Languages
   if (candidate.languages && candidate.languages.length > 0) {
-    centerText(`Languages: ${candidate.languages.join(', ')}`, yPos, 9);
-    yPos += 8;
+    doc.text(`Languages: ${candidate.languages.join(', ')}`, margin, yPos);
+    yPos += 6;
   }
 
-  // Horizontal line after header
-  yPos += 5;
-  doc.setLineWidth(0.5);
-  doc.setDrawColor(100, 100, 100);
+  // Divider
+  yPos += 4;
+  doc.setDrawColor(...primaryColor);
+  doc.setLineWidth(0.8);
   doc.line(margin, yPos, pageWidth - margin, yPos);
-  yPos += 15;
+  yPos += 12;
 
-  // Section helper
+  // ─── Section Helper ───
   const addSection = (title: string) => {
+    checkPageBreak(20);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.setTextColor(30, 30, 30);
+    doc.setTextColor(...primaryColor);
     doc.text(title.toUpperCase(), margin, yPos);
-    yPos += 2;
-    doc.setLineWidth(0.3);
-    doc.line(margin, yPos, margin + 35, yPos);
-    yPos += 8;
+    yPos += 1.5;
+    doc.setDrawColor(...primaryColor);
+    doc.setLineWidth(0.4);
+    doc.line(margin, yPos, margin + doc.getTextWidth(title.toUpperCase()) + 4, yPos);
+    yPos += 7;
   };
 
-  // Career Objective
-  if (candidate.careerObjective) {
-    addSection('Career Objective');
+  const addBodyText = (text: string, indent = 0) => {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(10);
-    doc.setTextColor(50, 50, 50);
-    const objectiveLines = doc.splitTextToSize(candidate.careerObjective, contentWidth);
-    doc.text(objectiveLines, margin, yPos);
-    yPos += objectiveLines.length * 5 + 10;
+    doc.setTextColor(...darkColor);
+    const lines = doc.splitTextToSize(text, contentWidth - indent);
+    checkPageBreak(lines.length * 5);
+    doc.text(lines, margin + indent, yPos);
+    yPos += lines.length * 5;
+  };
+
+  // ─── Career Objective ───
+  if (candidate.careerObjective) {
+    addSection('Career Objective');
+    addBodyText(candidate.careerObjective);
+    yPos += 6;
   }
 
-  // Professional Summary
+  // ─── Professional Summary ───
   addSection('Professional Summary');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(50, 50, 50);
-  
-  const summaryText = `Dedicated and hardworking professional with ${candidate.experienceYears} years of hands-on experience. ` +
-    `Completed ${candidate.educationLevel} level education. Seeking opportunities to contribute skills and grow professionally. ` +
-    `Known for reliability, strong work ethic, and ability to work in team environments.`;
-  
-  const summaryLines = doc.splitTextToSize(summaryText, contentWidth);
-  doc.text(summaryLines, margin, yPos);
-  yPos += summaryLines.length * 5 + 12;
+  const summaryText = `Results-oriented professional with ${candidate.experienceYears} year${candidate.experienceYears !== 1 ? 's' : ''} of practical experience. ` +
+    `Holds ${candidate.educationLevel} level education with proficiency in ${candidate.skills.slice(0, 4).join(', ')}. ` +
+    `Recognized for reliability, adaptability, and a strong commitment to delivering quality work.`;
+  addBodyText(summaryText);
+  yPos += 6;
 
-  // Work Experience
+  // ─── Work Experience ───
   addSection('Work Experience');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-
   if (candidate.workHistory && candidate.workHistory.length > 0) {
-    candidate.workHistory.forEach((work, index) => {
-      // Check if we need a new page
-      if (yPos > pageHeight - 60) {
-        doc.addPage();
-        addWatermark();
-        yPos = 25;
+    candidate.workHistory.forEach((work) => {
+      checkPageBreak(25);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...darkColor);
+      doc.text(work.position, margin + 4, yPos);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...grayColor);
+      doc.setFontSize(10);
+      doc.text(` — ${work.company}`, margin + 4 + doc.getTextWidth(work.position + ' '), yPos);
+      yPos += 5;
+
+      if (work.duration) {
+        doc.setFontSize(9);
+        doc.setTextColor(...lightGray);
+        doc.text(work.duration, margin + 4, yPos);
+        yPos += 5;
       }
 
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 30, 30);
-      doc.text(`${work.position}`, margin + 5, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(80, 80, 80);
-      doc.text(`| ${work.company}`, margin + 5 + doc.getTextWidth(work.position + ' '), yPos);
-      yPos += 5;
-
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      doc.text(work.duration, margin + 5, yPos);
-      yPos += 5;
-
-      doc.setFontSize(10);
-      doc.setTextColor(50, 50, 50);
-      const respLines = doc.splitTextToSize(`• ${work.responsibilities}`, contentWidth - 10);
-      doc.text(respLines, margin + 5, yPos);
-      yPos += respLines.length * 5 + 8;
+      if (work.responsibilities) {
+        doc.setFontSize(10);
+        doc.setTextColor(...darkColor);
+        const respLines = doc.splitTextToSize(`• ${work.responsibilities}`, contentWidth - 8);
+        checkPageBreak(respLines.length * 5);
+        doc.text(respLines, margin + 4, yPos);
+        yPos += respLines.length * 5 + 4;
+      }
     });
   } else {
-    doc.setTextColor(50, 50, 50);
-    doc.text(`• ${candidate.experienceYears} years of professional work experience`, margin + 5, yPos);
-    yPos += 6;
-    doc.text(`• Experienced in ${candidate.skills.slice(0, 3).join(', ')}`, margin + 5, yPos);
-    yPos += 6;
-    doc.text(`• Based in ${candidate.address}`, margin + 5, yPos);
-    yPos += 12;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...darkColor);
+    const expItems = [
+      `${candidate.experienceYears} year${candidate.experienceYears !== 1 ? 's' : ''} of professional work experience`,
+      `Skilled in ${candidate.skills.slice(0, 3).join(', ')}`,
+      `Based in ${candidate.address}`,
+    ];
+    expItems.forEach((item) => {
+      checkPageBreak(6);
+      doc.text(`•  ${item}`, margin + 4, yPos);
+      yPos += 6;
+    });
   }
+  yPos += 6;
 
-  // Education
-  if (yPos > pageHeight - 80) {
-    doc.addPage();
-    addWatermark();
-    yPos = 25;
-  }
-
+  // ─── Education ───
   addSection('Education');
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.setTextColor(50, 50, 50);
-  doc.text(`• ${candidate.educationLevel}`, margin + 5, yPos);
-  yPos += 12;
+  doc.setTextColor(...darkColor);
+  doc.text(`•  ${candidate.educationLevel}`, margin + 4, yPos);
+  yPos += 10;
 
-  // Skills
+  // ─── Skills & Competencies ───
   addSection('Skills & Competencies');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(50, 50, 50);
+  checkPageBreak(Math.ceil(candidate.skills.length / 3) * 7 + 5);
 
-  // Display skills in columns
-  const skillsPerRow = 3;
-  const skillWidth = contentWidth / skillsPerRow;
-  candidate.skills.forEach((skill, index) => {
-    const col = index % skillsPerRow;
-    const row = Math.floor(index / skillsPerRow);
-    if (col === 0 && row > 0) yPos += 6;
-    doc.text(`• ${skill}`, margin + 5 + col * skillWidth, yPos);
+  const skillColWidth = contentWidth / 3;
+  candidate.skills.forEach((skill, i) => {
+    const col = i % 3;
+    const x = margin + 4 + col * skillColWidth;
+    if (col === 0 && i > 0) yPos += 6;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(...darkColor);
+    doc.text(`•  ${skill}`, x, yPos);
   });
-  yPos += 12;
+  yPos += 10;
 
-  // Expected Salary
-  if (yPos > pageHeight - 50) {
-    doc.addPage();
-    addWatermark();
-    yPos = 25;
-  }
-
+  // ─── Expected Salary ───
   addSection('Expected Remuneration');
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.setTextColor(50, 50, 50);
-  doc.text(`NPR ${candidate.expectedSalary.toLocaleString()} per month (negotiable)`, margin + 5, yPos);
-  yPos += 12;
+  doc.setTextColor(...darkColor);
+  doc.text(`NPR ${candidate.expectedSalary.toLocaleString()} per month (negotiable)`, margin + 4, yPos);
+  yPos += 10;
 
-  // References
+  // ─── References ───
   if (candidate.referenceContacts && candidate.referenceContacts.length > 0) {
-    if (yPos > pageHeight - 60) {
-      doc.addPage();
-      addWatermark();
-      yPos = 25;
-    }
-
     addSection('References');
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-
     candidate.referenceContacts.forEach((ref) => {
+      checkPageBreak(18);
       doc.setFont('helvetica', 'bold');
-      doc.setTextColor(30, 30, 30);
-      doc.text(ref.name, margin + 5, yPos);
+      doc.setFontSize(10);
+      doc.setTextColor(...darkColor);
+      doc.text(ref.name, margin + 4, yPos);
       yPos += 5;
-
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(9);
-      doc.setTextColor(60, 60, 60);
-      doc.text(`${ref.relationship} at ${ref.company}`, margin + 5, yPos);
-      yPos += 4;
-      doc.text(`Phone: ${ref.phone}`, margin + 5, yPos);
-      yPos += 8;
+      doc.setTextColor(...grayColor);
+      doc.text(`${ref.relationship} at ${ref.company}  |  ${ref.phone}`, margin + 4, yPos);
+      yPos += 7;
     });
   } else if (candidate.references) {
     addSection('References');
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(50, 50, 50);
-    doc.text(`• ${candidate.references}`, margin + 5, yPos);
-    yPos += 12;
+    addBodyText(`•  ${candidate.references}`, 4);
+    yPos += 6;
   }
 
-  // Declaration
-  if (yPos > pageHeight - 40) {
-    doc.addPage();
-    addWatermark();
-    yPos = 25;
-  }
-
+  // ─── Declaration ───
+  checkPageBreak(35);
   addSection('Declaration');
   doc.setFont('helvetica', 'italic');
   doc.setFontSize(9);
-  doc.setTextColor(60, 60, 60);
+  doc.setTextColor(...grayColor);
   const declaration = 'I hereby declare that all the information provided above is true and correct to the best of my knowledge and belief.';
   const declLines = doc.splitTextToSize(declaration, contentWidth);
   doc.text(declLines, margin, yPos);
-  yPos += declLines.length * 4 + 15;
+  yPos += declLines.length * 4 + 14;
 
-  // Signature area
+  // Signature
+  checkPageBreak(15);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
-  doc.setTextColor(30, 30, 30);
+  doc.setTextColor(...darkColor);
   doc.text('Date: _______________', margin, yPos);
-  doc.text('Signature: _______________', pageWidth - margin - 60, yPos);
+  doc.text('Signature: _______________', pageWidth - margin - 55, yPos);
 
-  // Footer
-  const footerY = pageHeight - 12;
-  doc.setLineWidth(0.3);
-  doc.setDrawColor(150, 150, 150);
-  doc.line(margin, footerY - 5, pageWidth - margin, footerY - 5);
-  
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text(`Generated by ${settings.agencyName}`, margin, footerY);
-  doc.text(new Date().toLocaleDateString('en-NP', { 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
-  }), pageWidth - margin - 35, footerY);
+  // ─── Footer ───
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    const footerY = pageHeight - 10;
+    doc.setDrawColor(...lightGray);
+    doc.setLineWidth(0.3);
+    doc.line(margin, footerY - 4, pageWidth - margin, footerY - 4);
 
-  // Save the PDF
+    doc.setFontSize(8);
+    doc.setTextColor(...lightGray);
+    doc.text(`Generated by ${settings.agencyName}`, margin, footerY);
+    doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2 - 10, footerY);
+    doc.text(new Date().toLocaleDateString('en-NP', { year: 'numeric', month: 'long', day: 'numeric' }), pageWidth - margin - 40, footerY);
+
+    // Bottom accent bar
+    doc.setFillColor(...primaryColor);
+    doc.rect(0, pageHeight - 4, pageWidth, 4, 'F');
+  }
+
   doc.save(`CV_${candidate.fullName.replace(/\s+/g, '_')}.pdf`);
 };
