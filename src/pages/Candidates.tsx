@@ -31,7 +31,7 @@ import { format } from 'date-fns';
 
 const Candidates = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { candidates, isLoading, addCandidate, deleteCandidate } = useCandidates();
+  const { candidates, isLoading, addCandidate, updateCandidate, deleteCandidate } = useCandidates();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);

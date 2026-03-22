@@ -201,13 +201,6 @@ export function AppSidebar() {
               </div>
               <DarkModeToggle />
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-lg transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </button>
           </div>
         </div>
       </aside>
