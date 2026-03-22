@@ -219,7 +219,20 @@ const Candidates = () => {
                     {candidate.created_at ? format(new Date(candidate.created_at), 'MMM d, yyyy') : '-'}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-1">
+                     <div className="flex items-center justify-end gap-1">
+                      {candidate.status === 'Active' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            updateCandidate.mutate({ id: candidate.id, status: 'Sent for Interview' });
+                          }}
+                          title="Send for Interview"
+                          className="text-warning hover:text-warning"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
