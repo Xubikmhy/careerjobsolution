@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, FileText, Eye, Trash2, Plus } from 'lucide-react';
+import { Users, FileText, Eye, Trash2, Plus, Send } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
