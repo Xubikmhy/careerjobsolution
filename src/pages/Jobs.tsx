@@ -218,69 +218,10 @@ const Jobs = () => {
         {filteredJobs.length === 0 ? (
           <div className="col-span-full text-center py-12 text-muted-foreground">No job postings found</div>
         ) : (
-          filteredJobs.map((job, index) => (
-            <motion.div
-              key={job.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              whileHover={{ y: -4, transition: { duration: 0.2 } }}
-              className="bg-card rounded-xl border border-border p-5 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div>
-                  <h3 className="font-semibold text-foreground">{job.role_title}</h3>
-                  <p className="text-sm text-muted-foreground">{job.company_name}</p>
-                </div>
-                <StatusBadge status={job.status} variant={getStatusVariant(job.status)} />
-              </div>
-
-              <div className="space-y-2 mb-4">
-                <p className="text-lg font-bold text-success">
-                  NPR {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
-                </p>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{job.location}</span>
-                  <span>•</span>
-                  <span>{job.timing}</span>
-                  <span>•</span>
-                  <span>{job.created_at ? format(new Date(job.created_at), 'MMM d, yyyy') : ''}</span>
-                </div>
-              </div>
-
-              <SkillTagList skills={job.required_skills || []} max={3} className="mb-4" />
-
-              {/* Match score preview */}
-              {candidates.filter(c => c.status === 'Active').length > 0 && (
-                <div className="mb-3">
-                  <p className="text-xs text-muted-foreground mb-1">Top candidates matching</p>
-                  <div className="flex gap-1">
-                    {getMatchingCandidates(job).slice(0, 3).map(c => (
-                      <Badge key={c.id} variant="secondary" className="text-xs">
-                        {calculateMatchScore(c, job)}%
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-3 border-t border-border" onClick={e => e.stopPropagation()}>
-                <Button variant="outline" size="sm" className="flex-1 gap-1" onClick={() => handleSmartMatch(job)}>
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  AI Match
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}>
-                  <Eye className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="sm" onClick={() => deleteJob.mutate(job.id)} className="text-destructive hover:text-destructive">
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </motion.div>
-          ))
+          filteredJobs.map((job, index) => renderJobCard(job, index))
         )}
       </div>
+      )}
 
       {/* Job Detail Modal */}
       <JobDetailModal
