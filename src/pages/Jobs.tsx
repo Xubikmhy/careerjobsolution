@@ -69,6 +69,7 @@ const Jobs = () => {
     remarks: '',
   });
   const [skillInput, setSkillInput] = useState('');
+  const [groupBySkills, setGroupBySkills] = useState(false);
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -80,6 +81,16 @@ const Jobs = () => {
       return matchesSearch && matchesStatus;
     });
   }, [jobs, searchQuery, statusFilter]);
+
+  const jobSkillGroups = useMemo(() => {
+    const groups: Record<string, typeof filteredJobs> = {};
+    filteredJobs.forEach((j) => {
+      const primary = j.required_skills?.[0] || 'General';
+      if (!groups[primary]) groups[primary] = [];
+      groups[primary].push(j);
+    });
+    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b));
+  }, [filteredJobs]);
 
   const getMatchingCandidates = (job: JobDB) => {
     return candidates
