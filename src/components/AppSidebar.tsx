@@ -13,15 +13,11 @@ import {
   Building2,
   FileText,
   Sparkles,
-  LogOut,
 } from 'lucide-react';
 import { SidebarNavLink } from './SidebarNavLink';
 import { DarkModeToggle } from './DarkModeToggle';
 import { cn } from '@/lib/utils';
 import { getAgencySettings } from '@/utils/agencySettings';
-import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
 
 const recruitmentLinks = [
   { to: '/candidates', icon: Users, label: 'Candidates' },
@@ -45,19 +41,12 @@ const servicesLinks = [
 export function AppSidebar() {
   const [isOpen, setIsOpen] = useState(true);
   const location = useLocation();
-  const navigate = useNavigate();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     const settings = getAgencySettings();
     setLogoUrl(settings.logoUrl);
   }, []);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success('Logged out successfully');
-    navigate('/auth');
-  };
 
   return (
     <>
@@ -212,13 +201,6 @@ export function AppSidebar() {
               </div>
               <DarkModeToggle />
             </div>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2 w-full px-3 py-2 text-sm text-sidebar-muted hover:text-sidebar-foreground hover:bg-sidebar-accent rounded-lg transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </button>
           </div>
         </div>
       </aside>

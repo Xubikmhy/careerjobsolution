@@ -37,7 +37,7 @@ export function getStatusVariant(status: string): StatusBadgeProps['variant'] {
   if (['placed', 'occupied', 'closed', 'filled'].includes(statusLower)) {
     return 'info';
   }
-  if (['pending', 'in progress'].includes(statusLower)) {
+  if (['pending', 'in progress', 'sent for interview', 'interview'].includes(statusLower)) {
     return 'warning';
   }
   if (['rejected', 'cancelled'].includes(statusLower)) {

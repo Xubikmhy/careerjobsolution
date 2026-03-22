@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, FileText, Eye, Trash2, Plus } from 'lucide-react';
+import { Users, FileText, Eye, Trash2, Plus, Send } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
@@ -31,7 +31,7 @@ import { format } from 'date-fns';
 
 const Candidates = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { candidates, isLoading, addCandidate, deleteCandidate } = useCandidates();
+  const { candidates, isLoading, addCandidate, updateCandidate, deleteCandidate } = useCandidates();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -158,6 +158,7 @@ const Candidates = () => {
             onChange: setStatusFilter,
             options: [
               { value: 'Active', label: 'Active' },
+              { value: 'Sent for Interview', label: 'Sent for Interview' },
               { value: 'Placed', label: 'Placed' },
             ],
           },
@@ -218,7 +219,20 @@ const Candidates = () => {
                     {candidate.created_at ? format(new Date(candidate.created_at), 'MMM d, yyyy') : '-'}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center justify-end gap-1">
+                     <div className="flex items-center justify-end gap-1">
+                      {candidate.status === 'Active' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => {
+                            updateCandidate.mutate({ id: candidate.id, status: 'Sent for Interview' });
+                          }}
+                          title="Send for Interview"
+                          className="text-warning hover:text-warning"
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
