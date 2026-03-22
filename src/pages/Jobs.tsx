@@ -190,9 +190,30 @@ const Jobs = () => {
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
         filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Filled', label: 'Filled' }, { value: 'Closed', label: 'Closed' }] }]}
-        className="mb-6"
+        className="mb-4"
       />
 
+      <div className="flex justify-end mb-4">
+        <Button variant={groupBySkills ? 'default' : 'outline'} size="sm" onClick={() => setGroupBySkills(!groupBySkills)}>
+          Group by Skill
+        </Button>
+      </div>
+
+      {groupBySkills ? (
+        <div className="space-y-8">
+          {jobSkillGroups.map(([skill, groupJobs]) => (
+            <div key={skill}>
+              <div className="flex items-center gap-2 mb-3">
+                <Badge variant="secondary" className="text-sm">{skill}</Badge>
+                <span className="text-sm text-muted-foreground">({groupJobs.length})</span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {groupJobs.map((job, index) => renderJobCard(job, index))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredJobs.length === 0 ? (
           <div className="col-span-full text-center py-12 text-muted-foreground">No job postings found</div>
