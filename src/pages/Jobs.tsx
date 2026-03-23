@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { useJobs, JobDB } from '@/hooks/useJobs';
 import { useCandidates, CandidateDB } from '@/hooks/useCandidates';
+import { useCandidateActivities } from '@/hooks/useCandidateActivities';
 import { JobDetailModal, calculateMatchScore } from '@/components/JobDetailModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
