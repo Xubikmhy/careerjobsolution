@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/select';
 import { useJobs, JobDB } from '@/hooks/useJobs';
 import { useCandidates, CandidateDB } from '@/hooks/useCandidates';
+import { useCandidateActivities } from '@/hooks/useCandidateActivities';
 import { JobDetailModal, calculateMatchScore } from '@/components/JobDetailModal';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -38,6 +39,7 @@ const Jobs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { jobs, isLoading, addJob, deleteJob } = useJobs();
   const { candidates } = useCandidates();
+  const { allActivities } = useCandidateActivities();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -165,6 +167,18 @@ const Jobs = () => {
 
   const matchingCandidates = selectedJob ? getMatchingCandidates(selectedJob) : [];
 
+  // Get activities for selected job and build candidate names map
+  const jobActivities = useMemo(() => {
+    if (!selectedJob) return [];
+    return allActivities.filter(a => a.job_id === selectedJob.id);
+  }, [allActivities, selectedJob]);
+
+  const candidateNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    candidates.forEach(c => { map[c.id] = c.full_name; });
+    return map;
+  }, [candidates]);
+
   const renderJobCard = useCallback((job: JobDB, index: number) => (
     <motion.div
       key={job.id}
@@ -287,6 +301,8 @@ const Jobs = () => {
         onOpenChange={setIsDetailOpen}
         matchingCandidates={selectedJob ? getMatchingCandidates(selectedJob) : []}
         onFindMatch={() => { setIsDetailOpen(false); if (selectedJob) handleSmartMatch(selectedJob); }}
+        jobActivities={jobActivities}
+        candidateNames={candidateNames}
       />
 
       {/* Add Job Modal */}

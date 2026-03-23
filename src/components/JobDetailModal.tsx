@@ -4,19 +4,13 @@ import { StatusBadge, getStatusVariant } from '@/components/StatusBadge';
 import { SkillTagList } from '@/components/SkillTag';
 import { JobDB } from '@/hooks/useJobs';
 import { CandidateDB } from '@/hooks/useCandidates';
+import { CandidateActivity } from '@/hooks/useCandidateActivities';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Building2,
-  MapPin,
-  Clock,
-  DollarSign,
-  Phone,
-  User,
-  Sparkles,
-  Briefcase,
-  Send,
+  Building2, MapPin, Clock, DollarSign, Phone, User, Sparkles, Briefcase, Send, CheckCircle2, RotateCcw,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { format } from 'date-fns';
 
 interface JobDetailModalProps {
   job: JobDB | null;
@@ -24,6 +18,8 @@ interface JobDetailModalProps {
   onOpenChange: (open: boolean) => void;
   matchingCandidates: CandidateDB[];
   onFindMatch: () => void;
+  jobActivities?: CandidateActivity[];
+  candidateNames?: Record<string, string>;
 }
 
 function calculateMatchScore(candidate: CandidateDB, job: JobDB): number {
@@ -31,7 +27,6 @@ function calculateMatchScore(candidate: CandidateDB, job: JobDB): number {
   const jobSkills = job.required_skills || [];
   const candSkills = candidate.skills || [];
 
-  // Skill matching (up to 60 points)
   if (jobSkills.length > 0) {
     const matchedSkills = jobSkills.filter(reqSkill =>
       candSkills.some(cs =>
@@ -44,14 +39,12 @@ function calculateMatchScore(candidate: CandidateDB, job: JobDB): number {
     score += 30;
   }
 
-  // Salary match (up to 25 points)
   if (candidate.expected_salary <= job.salary_max) {
     score += 25;
   } else if (candidate.expected_salary <= job.salary_max * 1.1) {
     score += 15;
   }
 
-  // Experience bonus (up to 15 points)
   if (candidate.experience_years >= 3) score += 15;
   else if (candidate.experience_years >= 1) score += 10;
   else score += 5;
@@ -59,7 +52,19 @@ function calculateMatchScore(candidate: CandidateDB, job: JobDB): number {
   return Math.min(score, 100);
 }
 
-export function JobDetailModal({ job, open, onOpenChange, matchingCandidates, onFindMatch }: JobDetailModalProps) {
+const activityIcons: Record<string, React.ElementType> = {
+  sent_for_interview: Send,
+  placed: CheckCircle2,
+  interview_returned: RotateCcw,
+};
+
+const activityColors: Record<string, string> = {
+  sent_for_interview: 'text-warning',
+  placed: 'text-success',
+  interview_returned: 'text-primary',
+};
+
+export function JobDetailModal({ job, open, onOpenChange, matchingCandidates, onFindMatch, jobActivities = [], candidateNames = {} }: JobDetailModalProps) {
   if (!job) return null;
 
   return (
@@ -90,12 +95,7 @@ export function JobDetailModal({ job, open, onOpenChange, matchingCandidates, on
             {/* Body */}
             <div className="p-6 space-y-6">
               {/* Key Details */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="grid grid-cols-2 gap-4"
-              >
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-success/5 rounded-xl border border-success/20">
                   <div className="flex items-center gap-2 mb-1">
                     <DollarSign className="h-4 w-4 text-success" />
@@ -115,12 +115,7 @@ export function JobDetailModal({ job, open, onOpenChange, matchingCandidates, on
               </motion.div>
 
               {/* Location & Contact */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.15 }}
-                className="space-y-3"
-              >
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="space-y-3">
                 {job.location && (
                   <div className="flex items-center gap-3 text-sm">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
@@ -142,11 +137,7 @@ export function JobDetailModal({ job, open, onOpenChange, matchingCandidates, on
               </motion.div>
 
               {/* Required Skills */}
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-              >
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                 <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                   <Briefcase className="h-4 w-4" />
                   Required Skills
@@ -154,14 +145,51 @@ export function JobDetailModal({ job, open, onOpenChange, matchingCandidates, on
                 <SkillTagList skills={job.required_skills || []} max={20} />
               </motion.div>
 
+              {/* Candidate Pipeline for this Job */}
+              {jobActivities.length > 0 && (
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.22 }}>
+                  <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                    <Send className="h-4 w-4 text-warning" />
+                    Candidate Pipeline ({jobActivities.length})
+                  </h4>
+                  <div className="space-y-2">
+                    {jobActivities.map((activity) => {
+                      const Icon = activityIcons[activity.activity_type] || Send;
+                      const color = activityColors[activity.activity_type] || 'text-muted-foreground';
+                      return (
+                        <div key={activity.id} className="flex items-center gap-3 p-3 bg-card rounded-lg border border-border">
+                          <Icon className={`h-4 w-4 ${color} shrink-0`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm text-foreground">
+                              {candidateNames[activity.candidate_id] || 'Unknown'}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {activity.activity_type === 'sent_for_interview' && 'Sent for Interview'}
+                              {activity.activity_type === 'placed' && 'Placed'}
+                              {activity.activity_type === 'interview_returned' && 'Returned'}
+                              {' • '}
+                              {format(new Date(activity.created_at), 'MMM d, yyyy')}
+                            </p>
+                            {activity.remarks && (
+                              <p className="text-xs text-muted-foreground truncate mt-0.5">{activity.remarks}</p>
+                            )}
+                          </div>
+                          <Badge
+                            variant={activity.activity_type === 'placed' ? 'default' : 'secondary'}
+                            className={activity.activity_type === 'placed' ? 'bg-success text-success-foreground' : ''}
+                          >
+                            {activity.activity_type === 'placed' ? 'Placed' : activity.activity_type === 'sent_for_interview' ? 'Interview' : 'Returned'}
+                          </Badge>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+
               {/* Remarks */}
               {job.remarks && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.25 }}
-                  className="p-4 bg-muted/50 rounded-xl"
-                >
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="p-4 bg-muted/50 rounded-xl">
                   <h4 className="text-sm font-semibold text-foreground mb-2">Notes</h4>
                   <p className="text-sm text-muted-foreground">{job.remarks}</p>
                 </motion.div>
@@ -169,11 +197,7 @@ export function JobDetailModal({ job, open, onOpenChange, matchingCandidates, on
 
               {/* Top Matching Candidates */}
               {matchingCandidates.length > 0 && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                >
+                <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
                   <h4 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
                     <Sparkles className="h-4 w-4 text-primary" />
                     Top Matches ({matchingCandidates.length})
