@@ -87,7 +87,88 @@ export default function Settings() {
     }
   };
 
-  const handleSave = () => {
+  const handleBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const [candidates, jobs, properties, tenants, placements, transactions, agencySettings, workExperiences] = await Promise.all([
+        supabase.from('candidates').select('*'),
+        supabase.from('job_requirements').select('*'),
+        supabase.from('properties').select('*'),
+        supabase.from('tenants').select('*'),
+        supabase.from('placements').select('*'),
+        supabase.from('transactions').select('*'),
+        supabase.from('agency_settings').select('*'),
+        supabase.from('work_experiences').select('*'),
+      ]);
+
+      const backup = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        candidates: candidates.data || [],
+        job_requirements: jobs.data || [],
+        properties: properties.data || [],
+        tenants: tenants.data || [],
+        placements: placements.data || [],
+        transactions: transactions.data || [],
+        agency_settings: agencySettings.data || [],
+        work_experiences: workExperiences.data || [],
+      };
+
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `career-job-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Backup downloaded successfully' });
+    } catch (err) {
+      toast({ title: 'Backup failed', description: String(err), variant: 'destructive' });
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleRestore = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setRestoreLoading(true);
+    try {
+      const text = await file.text();
+      const backup = JSON.parse(text);
+      if (!backup.version || !backup.candidates) {
+        throw new Error('Invalid backup file');
+      }
+
+      // Clear existing data in order (respect foreign keys)
+      await supabase.from('work_experiences').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('placements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('transactions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('tenants').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('properties').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('job_requirements').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from('candidates').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+
+      // Insert backup data
+      if (backup.candidates?.length) await supabase.from('candidates').insert(backup.candidates);
+      if (backup.job_requirements?.length) await supabase.from('job_requirements').insert(backup.job_requirements);
+      if (backup.properties?.length) await supabase.from('properties').insert(backup.properties);
+      if (backup.tenants?.length) await supabase.from('tenants').insert(backup.tenants);
+      if (backup.placements?.length) await supabase.from('placements').insert(backup.placements);
+      if (backup.transactions?.length) await supabase.from('transactions').insert(backup.transactions);
+      if (backup.work_experiences?.length) await supabase.from('work_experiences').insert(backup.work_experiences);
+
+      toast({ title: 'Data restored successfully', description: 'Please refresh the page to see updated data.' });
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err) {
+      toast({ title: 'Restore failed', description: String(err), variant: 'destructive' });
+    } finally {
+      setRestoreLoading(false);
+      if (restoreInputRef.current) restoreInputRef.current.value = '';
+    }
+  };
+
+
     updateSettings.mutate({
       agency_name: localSettings.agencyName,
       phone: localSettings.phone,
