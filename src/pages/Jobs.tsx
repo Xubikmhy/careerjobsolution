@@ -301,6 +301,8 @@ const Jobs = () => {
         onOpenChange={setIsDetailOpen}
         matchingCandidates={selectedJob ? getMatchingCandidates(selectedJob) : []}
         onFindMatch={() => { setIsDetailOpen(false); if (selectedJob) handleSmartMatch(selectedJob); }}
+        jobActivities={jobActivities}
+        candidateNames={candidateNames}
       />
 
       {/* Add Job Modal */}
