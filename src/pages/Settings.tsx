@@ -13,6 +13,9 @@ import { convertFileToBase64 } from '@/utils/agencySettings';
 import { supabase } from '@/integrations/supabase/client';
 
 export default function Settings() {
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [restoreLoading, setRestoreLoading] = useState(false);
+  const restoreInputRef = useRef<HTMLInputElement>(null);
   const { settings, isLoading, updateSettings } = useAgencySettings();
   const [localSettings, setLocalSettings] = useState({
     agencyName: '',
