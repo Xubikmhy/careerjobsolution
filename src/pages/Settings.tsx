@@ -168,7 +168,7 @@ export default function Settings() {
     }
   };
 
-
+  const handleSave = () => {
     updateSettings.mutate({
       agency_name: localSettings.agencyName,
       phone: localSettings.phone,
