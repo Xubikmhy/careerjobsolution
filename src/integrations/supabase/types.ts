@@ -44,6 +44,60 @@ export type Database = {
         }
         Relationships: []
       }
+      candidate_activities: {
+        Row: {
+          activity_type: string
+          candidate_id: string
+          created_at: string
+          follow_up_date: string | null
+          follow_up_done: boolean | null
+          id: string
+          job_id: string | null
+          placed_at: string | null
+          remarks: string | null
+          status: string
+        }
+        Insert: {
+          activity_type: string
+          candidate_id: string
+          created_at?: string
+          follow_up_date?: string | null
+          follow_up_done?: boolean | null
+          id?: string
+          job_id?: string | null
+          placed_at?: string | null
+          remarks?: string | null
+          status: string
+        }
+        Update: {
+          activity_type?: string
+          candidate_id?: string
+          created_at?: string
+          follow_up_date?: string | null
+          follow_up_done?: boolean | null
+          id?: string
+          job_id?: string | null
+          placed_at?: string | null
+          remarks?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidate_activities_candidate_id_fkey"
+            columns: ["candidate_id"]
+            isOneToOne: false
+            referencedRelation: "candidates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidate_activities_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "job_requirements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       candidates: {
         Row: {
           address: string | null
