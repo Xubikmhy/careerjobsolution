@@ -39,6 +39,7 @@ const Jobs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { jobs, isLoading, addJob, deleteJob } = useJobs();
   const { candidates } = useCandidates();
+  const { allActivities } = useCandidateActivities();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
