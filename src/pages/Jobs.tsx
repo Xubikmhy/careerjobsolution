@@ -167,6 +167,18 @@ const Jobs = () => {
 
   const matchingCandidates = selectedJob ? getMatchingCandidates(selectedJob) : [];
 
+  // Get activities for selected job and build candidate names map
+  const jobActivities = useMemo(() => {
+    if (!selectedJob) return [];
+    return allActivities.filter(a => a.job_id === selectedJob.id);
+  }, [allActivities, selectedJob]);
+
+  const candidateNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    candidates.forEach(c => { map[c.id] = c.full_name; });
+    return map;
+  }, [candidates]);
+
   const renderJobCard = useCallback((job: JobDB, index: number) => (
     <motion.div
       key={job.id}
