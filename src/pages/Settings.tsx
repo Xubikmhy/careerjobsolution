@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Upload, Save, Trash2, Building2 } from 'lucide-react';
+import { Upload, Save, Trash2, Building2, Download, UploadCloud, Loader2 } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
 import { useAgencySettings } from '@/hooks/useAgencySettings';
 import { convertFileToBase64 } from '@/utils/agencySettings';
+import { supabase } from '@/integrations/supabase/client';
 
 export default function Settings() {
   const { settings, isLoading, updateSettings } = useAgencySettings();
