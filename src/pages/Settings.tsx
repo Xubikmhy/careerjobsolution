@@ -232,6 +232,39 @@ export default function Settings() {
             {updateSettings.isPending ? 'Saving...' : 'Save Settings'}
           </Button>
         </div>
+
+        {/* Backup & Restore */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Backup & Restore</CardTitle>
+            <CardDescription>
+              Download all your data as a JSON file or restore from a previous backup
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button onClick={handleBackup} disabled={backupLoading} className="flex-1">
+                {backupLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+                {backupLoading ? 'Preparing...' : 'Download Backup'}
+              </Button>
+              <input
+                ref={restoreInputRef}
+                type="file"
+                accept=".json"
+                onChange={handleRestore}
+                className="hidden"
+              />
+              <Button variant="outline" onClick={() => restoreInputRef.current?.click()} disabled={restoreLoading} className="flex-1">
+                {restoreLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <UploadCloud className="h-4 w-4 mr-2" />}
+                {restoreLoading ? 'Restoring...' : 'Restore from Backup'}
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Backup includes all candidates, jobs, properties, tenants, placements, transactions, and settings.
+              Restoring will replace all existing data.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </DashboardLayout>
   );
