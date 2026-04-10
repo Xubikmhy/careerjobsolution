@@ -160,7 +160,11 @@ const Visitors = () => {
                     <p className="font-medium">{v.full_name}</p>
                     <p className="text-xs text-muted-foreground sm:hidden">{v.phone}</p>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">{v.phone}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      {v.phone} <WhatsAppButton phone={v.phone} name={v.full_name} />
+                    </span>
+                  </TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground">{v.address || '-'}</TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <SkillTagList skills={v.skills || []} max={3} />
@@ -177,6 +181,9 @@ const Visitors = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleConvertToCandidate(v)} title="Convert to Candidate" className="text-success hover:text-success">
+                        <UserPlus className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(v)} title="Edit">
                         <Edit2 className="h-4 w-4" />
                       </Button>
