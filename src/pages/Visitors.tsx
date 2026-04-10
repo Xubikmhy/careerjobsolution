@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
-import { UserCheck, Plus, Trash2, Edit2, MapPin, Phone, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { UserCheck, Plus, Trash2, Edit2, MapPin, Search, UserPlus, Download } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SkillTagList } from '@/components/SkillTag';
+import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +18,11 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { useVisitors, VisitorDB } from '@/hooks/useVisitors';
+import { useCandidates } from '@/hooks/useCandidates';
+import { useCandidateActivities } from '@/hooks/useCandidateActivities';
+import { exportToCSV } from '@/utils/exportData';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const Visitors = () => {
   const { visitors, isLoading, addVisitor, updateVisitor, deleteVisitor } = useVisitors();
