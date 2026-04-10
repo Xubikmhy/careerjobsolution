@@ -524,29 +524,45 @@ const Candidates = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Set Status After Return</Label>
-              <div className="flex gap-2">
+              <Label>Interview Result</Label>
+              <div className="flex gap-2 flex-wrap">
                 <Button variant={returnAction === 'Active' ? 'default' : 'outline'} size="sm" onClick={() => setReturnAction('Active')}>
                   Back to Active
                 </Button>
-                <Button variant={returnAction === 'Placed' ? 'default' : 'outline'} size="sm" onClick={() => setReturnAction('Placed')}>
-                  Mark as Placed
+                <Button variant={returnAction === 'Placed' ? 'default' : 'outline'} size="sm" onClick={() => setReturnAction('Placed')} className="bg-success hover:bg-success/90 text-white">
+                  Hired ✓
+                </Button>
+                <Button variant={returnAction === 'Not Hired' ? 'default' : 'outline'} size="sm" onClick={() => setReturnAction('Not Hired')} className={returnAction === 'Not Hired' ? 'bg-destructive hover:bg-destructive/90' : 'text-destructive border-destructive'}>
+                  Not Hired ✗
                 </Button>
               </div>
             </div>
+            {returnAction === 'Not Hired' && (
+              <div className="space-y-2">
+                <Label>Why wasn't the candidate hired? *</Label>
+                <Textarea
+                  placeholder="Employer said skills didn't match, salary too high, no experience..."
+                  value={notHiredReason}
+                  onChange={(e) => setNotHiredReason(e.target.value)}
+                  className="min-h-[80px] border-destructive/50"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Interview Remarks / Feedback</Label>
               <Textarea
                 placeholder="How did the interview go? Any feedback from employer..."
                 value={remarksText}
                 onChange={(e) => setRemarksText(e.target.value)}
-                className="min-h-[120px]"
+                className="min-h-[100px]"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRemarksOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmitReturn}>Save & Return</Button>
+            <Button onClick={handleSubmitReturn} disabled={returnAction === 'Not Hired' && !notHiredReason}>
+              Save & Return
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
