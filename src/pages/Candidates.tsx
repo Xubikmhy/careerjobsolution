@@ -305,26 +305,32 @@ const Candidates = () => {
   // Return from Interview
   const handleReturnInterview = (candidate: CandidateDB) => {
     setRemarksCandidate(candidate);
-    setRemarksText(candidate.remarks || '');
+    setRemarksText('');
+    setNotHiredReason('');
     setReturnAction('Active');
     setIsRemarksOpen(true);
   };
 
   const handleSubmitReturn = () => {
     if (!remarksCandidate) return;
+    const finalStatus = returnAction === 'Not Hired' ? 'Active' : returnAction;
+    const fullRemarks = returnAction === 'Not Hired'
+      ? `NOT HIRED - Reason: ${notHiredReason || 'No reason given'}. ${remarksText || ''}`.trim()
+      : remarksText || 'Returned from interview';
+
     updateCandidate.mutate({
       id: remarksCandidate.id,
-      status: returnAction,
-      remarks: remarksText || null,
+      status: finalStatus,
+      remarks: fullRemarks,
     });
 
     addActivity.mutate({
       candidate_id: remarksCandidate.id,
       job_id: null,
-      activity_type: 'interview_returned',
-      status: returnAction,
+      activity_type: returnAction === 'Not Hired' ? 'not_hired' : 'interview_returned',
+      status: finalStatus,
       placed_at: null,
-      remarks: remarksText || 'Returned from interview',
+      remarks: fullRemarks,
       follow_up_date: null,
       follow_up_done: false,
     });
@@ -332,6 +338,7 @@ const Candidates = () => {
     setIsRemarksOpen(false);
     setRemarksCandidate(null);
     setRemarksText('');
+    setNotHiredReason('');
   };
 
   // Place candidate with where/salary/remarks
