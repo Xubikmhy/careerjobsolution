@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
-import { UserCheck, Plus, Trash2, Edit2, MapPin, Phone, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { UserCheck, Plus, Trash2, Edit2, MapPin, Search, UserPlus, Download } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SkillTagList } from '@/components/SkillTag';
+import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,10 +18,17 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import { useVisitors, VisitorDB } from '@/hooks/useVisitors';
+import { useCandidates } from '@/hooks/useCandidates';
+import { useCandidateActivities } from '@/hooks/useCandidateActivities';
+import { exportToCSV } from '@/utils/exportData';
 import { format } from 'date-fns';
+import { toast } from 'sonner';
 
 const Visitors = () => {
   const { visitors, isLoading, addVisitor, updateVisitor, deleteVisitor } = useVisitors();
+  const { addCandidate } = useCandidates();
+  const { addActivity } = useCandidateActivities();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingVisitor, setEditingVisitor] = useState<VisitorDB | null>(null);
@@ -83,6 +92,42 @@ const Visitors = () => {
     resetForm();
   };
 
+  const handleConvertToCandidate = (v: VisitorDB) => {
+    addCandidate.mutate({
+      full_name: v.full_name,
+      phone: v.phone,
+      address: v.address,
+      skills: v.skills || [],
+      experience_years: 0,
+      education_level: null,
+      expected_salary: 0,
+      cv_url: null,
+      status: 'Active',
+      date_of_birth: null,
+      nationality: null,
+      marital_status: null,
+      languages: [],
+      career_objective: null,
+      reference_info: null,
+      remarks: `Converted from visitor. ${v.remarks || ''}`.trim(),
+    }, {
+      onSuccess: (newCandidate) => {
+        addActivity.mutate({
+          candidate_id: newCandidate.id,
+          job_id: null,
+          activity_type: 'registered',
+          status: 'Active',
+          placed_at: null,
+          remarks: 'Converted from visitor registry',
+          follow_up_date: null,
+          follow_up_done: false,
+        });
+        deleteVisitor.mutate(v.id);
+        toast.success(`${v.full_name} converted to candidate!`);
+      }
+    });
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -110,6 +155,9 @@ const Visitors = () => {
             className="pl-10"
           />
         </div>
+        <Button variant="outline" className="gap-2" onClick={() => exportToCSV(visitors.map(v => ({ Name: v.full_name, Phone: v.phone, Address: v.address, Skills: (v.skills || []).join(', '), 'Preferred Location': v.preferred_work_location, Remarks: v.remarks, Date: v.created_at })), 'visitors')}>
+          <Download className="h-4 w-4" /> Export
+        </Button>
         <Button onClick={openAdd} className="gap-2">
           <Plus className="h-4 w-4" /> Add Visitor
         </Button>
@@ -148,7 +196,11 @@ const Visitors = () => {
                     <p className="font-medium">{v.full_name}</p>
                     <p className="text-xs text-muted-foreground sm:hidden">{v.phone}</p>
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">{v.phone}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    <span className="flex items-center gap-1 text-muted-foreground">
+                      {v.phone} <WhatsAppButton phone={v.phone} name={v.full_name} />
+                    </span>
+                  </TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground">{v.address || '-'}</TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <SkillTagList skills={v.skills || []} max={3} />
@@ -165,6 +217,9 @@ const Visitors = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleConvertToCandidate(v)} title="Convert to Candidate" className="text-success hover:text-success">
+                        <UserPlus className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => openEdit(v)} title="Edit">
                         <Edit2 className="h-4 w-4" />
                       </Button>

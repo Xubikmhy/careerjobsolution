@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History } from 'lucide-react';
+import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
@@ -11,6 +11,7 @@ import { CandidateTimeline } from '@/components/CandidateTimeline';
 import { SendForInterviewModal } from '@/components/SendForInterviewModal';
 import { PlaceCandidateModal } from '@/components/PlaceCandidateModal';
 import { FollowUpReminders } from '@/components/FollowUpReminders';
+import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,6 +30,7 @@ import { usePlacements } from '@/hooks/usePlacements';
 import { useCandidateActivities } from '@/hooks/useCandidateActivities';
 import { Candidate, FEES } from '@/types';
 import { generateCandidateCV } from '@/utils/pdfGenerator';
+import { exportToCSV } from '@/utils/exportData';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -430,6 +432,13 @@ const Candidates = () => {
         icon={Users}
         action={{ label: 'Add Candidate', onClick: () => setIsFormOpen(true), icon: Plus }}
       />
+
+      {/* Export button */}
+      <div className="flex justify-end mb-2">
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => exportToCSV(candidates.map(c => ({ Name: c.full_name, Phone: c.phone, Address: c.address, Skills: (c.skills || []).join(', '), Experience: c.experience_years, Salary: c.expected_salary, Status: c.status, Date: c.created_at })), 'candidates')}>
+          <Download className="h-4 w-4" /> Export CSV
+        </Button>
+      </div>
 
       {/* Follow-up Reminders */}
       <FollowUpReminders
