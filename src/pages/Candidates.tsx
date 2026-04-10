@@ -153,7 +153,7 @@ function CandidateTable({
 const Candidates = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { candidates, isLoading, addCandidate, updateCandidate, deleteCandidate } = useCandidates();
-  const { jobs } = useJobs();
+  const { jobs, updateJob } = useJobs();
   const { addPlacement } = usePlacements();
   const { allActivities, pendingFollowUps, addActivity, updateActivity } = useCandidateActivities();
 
@@ -351,6 +351,9 @@ const Candidates = () => {
 
     // Update candidate status
     updateCandidate.mutate({ id: data.candidateId, status: 'Placed' });
+
+    // Mark job as Filled so it disappears from open listings
+    updateJob.mutate({ id: data.jobId, status: 'Filled' });
 
     // Create placement record
     addPlacement.mutate({
