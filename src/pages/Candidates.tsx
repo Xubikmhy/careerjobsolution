@@ -153,7 +153,7 @@ function CandidateTable({
 const Candidates = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { candidates, isLoading, addCandidate, updateCandidate, deleteCandidate } = useCandidates();
-  const { jobs } = useJobs();
+  const { jobs, updateJob } = useJobs();
   const { addPlacement } = usePlacements();
   const { allActivities, pendingFollowUps, addActivity, updateActivity } = useCandidateActivities();
 
@@ -172,7 +172,8 @@ const Candidates = () => {
   const [isRemarksOpen, setIsRemarksOpen] = useState(false);
   const [remarksCandidate, setRemarksCandidate] = useState<CandidateDB | null>(null);
   const [remarksText, setRemarksText] = useState('');
-  const [returnAction, setReturnAction] = useState<'Active' | 'Placed'>('Active');
+  const [notHiredReason, setNotHiredReason] = useState('');
+  const [returnAction, setReturnAction] = useState<'Active' | 'Placed' | 'Not Hired'>('Active');
 
   // Placement modal
   const [placeCandidate, setPlaceCandidate] = useState<CandidateDB | null>(null);
@@ -304,26 +305,32 @@ const Candidates = () => {
   // Return from Interview
   const handleReturnInterview = (candidate: CandidateDB) => {
     setRemarksCandidate(candidate);
-    setRemarksText(candidate.remarks || '');
+    setRemarksText('');
+    setNotHiredReason('');
     setReturnAction('Active');
     setIsRemarksOpen(true);
   };
 
   const handleSubmitReturn = () => {
     if (!remarksCandidate) return;
+    const finalStatus = returnAction === 'Not Hired' ? 'Active' : returnAction;
+    const fullRemarks = returnAction === 'Not Hired'
+      ? `NOT HIRED - Reason: ${notHiredReason || 'No reason given'}. ${remarksText || ''}`.trim()
+      : remarksText || 'Returned from interview';
+
     updateCandidate.mutate({
       id: remarksCandidate.id,
-      status: returnAction,
-      remarks: remarksText || null,
+      status: finalStatus,
+      remarks: fullRemarks,
     });
 
     addActivity.mutate({
       candidate_id: remarksCandidate.id,
       job_id: null,
-      activity_type: 'interview_returned',
-      status: returnAction,
+      activity_type: returnAction === 'Not Hired' ? 'not_hired' : 'interview_returned',
+      status: finalStatus,
       placed_at: null,
-      remarks: remarksText || 'Returned from interview',
+      remarks: fullRemarks,
       follow_up_date: null,
       follow_up_done: false,
     });
@@ -331,6 +338,7 @@ const Candidates = () => {
     setIsRemarksOpen(false);
     setRemarksCandidate(null);
     setRemarksText('');
+    setNotHiredReason('');
   };
 
   // Place candidate with where/salary/remarks
@@ -351,6 +359,9 @@ const Candidates = () => {
 
     // Update candidate status
     updateCandidate.mutate({ id: data.candidateId, status: 'Placed' });
+
+    // Mark job as Filled so it disappears from open listings
+    updateJob.mutate({ id: data.jobId, status: 'Filled' });
 
     // Create placement record
     addPlacement.mutate({
@@ -513,29 +524,45 @@ const Candidates = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Set Status After Return</Label>
-              <div className="flex gap-2">
+              <Label>Interview Result</Label>
+              <div className="flex gap-2 flex-wrap">
                 <Button variant={returnAction === 'Active' ? 'default' : 'outline'} size="sm" onClick={() => setReturnAction('Active')}>
                   Back to Active
                 </Button>
-                <Button variant={returnAction === 'Placed' ? 'default' : 'outline'} size="sm" onClick={() => setReturnAction('Placed')}>
-                  Mark as Placed
+                <Button variant={returnAction === 'Placed' ? 'default' : 'outline'} size="sm" onClick={() => setReturnAction('Placed')} className="bg-success hover:bg-success/90 text-white">
+                  Hired ✓
+                </Button>
+                <Button variant={returnAction === 'Not Hired' ? 'default' : 'outline'} size="sm" onClick={() => setReturnAction('Not Hired')} className={returnAction === 'Not Hired' ? 'bg-destructive hover:bg-destructive/90' : 'text-destructive border-destructive'}>
+                  Not Hired ✗
                 </Button>
               </div>
             </div>
+            {returnAction === 'Not Hired' && (
+              <div className="space-y-2">
+                <Label>Why wasn't the candidate hired? *</Label>
+                <Textarea
+                  placeholder="Employer said skills didn't match, salary too high, no experience..."
+                  value={notHiredReason}
+                  onChange={(e) => setNotHiredReason(e.target.value)}
+                  className="min-h-[80px] border-destructive/50"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label>Interview Remarks / Feedback</Label>
               <Textarea
                 placeholder="How did the interview go? Any feedback from employer..."
                 value={remarksText}
                 onChange={(e) => setRemarksText(e.target.value)}
-                className="min-h-[120px]"
+                className="min-h-[100px]"
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsRemarksOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmitReturn}>Save & Return</Button>
+            <Button onClick={handleSubmitReturn} disabled={returnAction === 'Not Hired' && !notHiredReason}>
+              Save & Return
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
