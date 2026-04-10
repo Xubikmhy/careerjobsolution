@@ -128,6 +128,7 @@ const Visitors = () => {
     });
   };
 
+  if (isLoading) {
     return (
       <DashboardLayout>
         <PageHeader title="Visitors" description="Walk-in visitor registry" icon={UserCheck} />
