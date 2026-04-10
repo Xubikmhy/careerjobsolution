@@ -26,6 +26,9 @@ import { toast } from 'sonner';
 
 const Visitors = () => {
   const { visitors, isLoading, addVisitor, updateVisitor, deleteVisitor } = useVisitors();
+  const { addCandidate } = useCandidates();
+  const { addActivity } = useCandidateActivities();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingVisitor, setEditingVisitor] = useState<VisitorDB | null>(null);
