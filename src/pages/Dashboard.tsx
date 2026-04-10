@@ -1,6 +1,7 @@
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { StatCard } from '@/components/StatCard';
 import { PageHeader } from '@/components/PageHeader';
+import { PipelineFunnel } from '@/components/PipelineFunnel';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useCandidates } from '@/hooks/useCandidates';
 import { useJobs } from '@/hooks/useJobs';
@@ -207,8 +208,13 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Pipeline Funnel */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        <PipelineFunnel />
+        <div className="lg:col-span-2">
+
       {/* Recent Activity Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
         {/* Recent Candidates */}
         <div className="bg-card rounded-xl border border-border overflow-hidden">
           <div className="flex items-center justify-between p-4 border-b border-border">
@@ -314,6 +320,8 @@ const Dashboard = () => {
             )}
           </div>
         </div>
+      </div>
+      </div>
       </div>
 
       {/* Recent Placements & Transactions */}
