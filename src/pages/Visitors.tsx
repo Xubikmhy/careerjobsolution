@@ -119,6 +119,9 @@ const Visitors = () => {
             className="pl-10"
           />
         </div>
+        <Button variant="outline" className="gap-2" onClick={() => exportToCSV(visitors.map(v => ({ Name: v.full_name, Phone: v.phone, Address: v.address, Skills: (v.skills || []).join(', '), 'Preferred Location': v.preferred_work_location, Remarks: v.remarks, Date: v.created_at })), 'visitors')}>
+          <Download className="h-4 w-4" /> Export
+        </Button>
         <Button onClick={openAdd} className="gap-2">
           <Plus className="h-4 w-4" /> Add Visitor
         </Button>
