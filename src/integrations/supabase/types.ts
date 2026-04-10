@@ -419,6 +419,39 @@ export type Database = {
         }
         Relationships: []
       }
+      visitors: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          full_name: string
+          id: string
+          phone: string
+          preferred_work_location: string | null
+          remarks: string | null
+          skills: string[] | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          full_name: string
+          id?: string
+          phone: string
+          preferred_work_location?: string | null
+          remarks?: string | null
+          skills?: string[] | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          full_name?: string
+          id?: string
+          phone?: string
+          preferred_work_location?: string | null
+          remarks?: string | null
+          skills?: string[] | null
+        }
+        Relationships: []
+      }
       work_experiences: {
         Row: {
           candidate_id: string | null
