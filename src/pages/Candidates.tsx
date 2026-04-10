@@ -172,7 +172,8 @@ const Candidates = () => {
   const [isRemarksOpen, setIsRemarksOpen] = useState(false);
   const [remarksCandidate, setRemarksCandidate] = useState<CandidateDB | null>(null);
   const [remarksText, setRemarksText] = useState('');
-  const [returnAction, setReturnAction] = useState<'Active' | 'Placed'>('Active');
+  const [notHiredReason, setNotHiredReason] = useState('');
+  const [returnAction, setReturnAction] = useState<'Active' | 'Placed' | 'Not Hired'>('Active');
 
   // Placement modal
   const [placeCandidate, setPlaceCandidate] = useState<CandidateDB | null>(null);
