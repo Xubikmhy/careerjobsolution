@@ -30,6 +30,7 @@ import { usePlacements } from '@/hooks/usePlacements';
 import { useCandidateActivities } from '@/hooks/useCandidateActivities';
 import { Candidate, FEES } from '@/types';
 import { generateCandidateCV } from '@/utils/pdfGenerator';
+import { exportToCSV } from '@/utils/exportData';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -431,6 +432,13 @@ const Candidates = () => {
         icon={Users}
         action={{ label: 'Add Candidate', onClick: () => setIsFormOpen(true), icon: Plus }}
       />
+
+      {/* Export button */}
+      <div className="flex justify-end mb-2">
+        <Button variant="outline" size="sm" className="gap-2" onClick={() => exportToCSV(candidates.map(c => ({ Name: c.full_name, Phone: c.phone, Address: c.address, Skills: (c.skills || []).join(', '), Experience: c.experience_years, Salary: c.expected_salary, Status: c.status, Date: c.created_at })), 'candidates')}>
+          <Download className="h-4 w-4" /> Export CSV
+        </Button>
+      </div>
 
       {/* Follow-up Reminders */}
       <FollowUpReminders
