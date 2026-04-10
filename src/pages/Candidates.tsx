@@ -11,6 +11,7 @@ import { CandidateTimeline } from '@/components/CandidateTimeline';
 import { SendForInterviewModal } from '@/components/SendForInterviewModal';
 import { PlaceCandidateModal } from '@/components/PlaceCandidateModal';
 import { FollowUpReminders } from '@/components/FollowUpReminders';
+import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
