@@ -13,6 +13,7 @@ import {
   Building2,
   FileText,
   Sparkles,
+  UserCheck,
 } from 'lucide-react';
 import { SidebarNavLink } from './SidebarNavLink';
 import { DarkModeToggle } from './DarkModeToggle';
@@ -22,6 +23,7 @@ import { getAgencySettings } from '@/utils/agencySettings';
 const recruitmentLinks = [
   { to: '/candidates', icon: Users, label: 'Candidates' },
   { to: '/jobs', icon: Briefcase, label: 'Job Openings' },
+  { to: '/visitors', icon: UserCheck, label: 'Visitors' },
 ];
 
 const realEstateLinks = [

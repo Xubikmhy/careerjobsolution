@@ -12,6 +12,7 @@ import Placements from "./pages/Placements";
 import Accounting from "./pages/Accounting";
 import Settings from "./pages/Settings";
 import CVGenerate from "./pages/CVGenerate";
+import Visitors from "./pages/Visitors";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const AppRoutes = () => {
       <Route path="/accounting" element={<Accounting />} />
       <Route path="/settings" element={<Settings />} />
       <Route path="/cv-generate" element={<CVGenerate />} />
+      <Route path="/visitors" element={<Visitors />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
