@@ -92,7 +92,42 @@ const Visitors = () => {
     resetForm();
   };
 
-  if (isLoading) {
+  const handleConvertToCandidate = (v: VisitorDB) => {
+    addCandidate.mutate({
+      full_name: v.full_name,
+      phone: v.phone,
+      address: v.address,
+      skills: v.skills || [],
+      experience_years: 0,
+      education_level: null,
+      expected_salary: 0,
+      cv_url: null,
+      status: 'Active',
+      date_of_birth: null,
+      nationality: null,
+      marital_status: null,
+      languages: [],
+      career_objective: null,
+      reference_info: null,
+      remarks: `Converted from visitor. ${v.remarks || ''}`.trim(),
+    }, {
+      onSuccess: (newCandidate) => {
+        addActivity.mutate({
+          candidate_id: newCandidate.id,
+          job_id: null,
+          activity_type: 'registered',
+          status: 'Active',
+          placed_at: null,
+          remarks: 'Converted from visitor registry',
+          follow_up_date: null,
+          follow_up_done: false,
+        });
+        deleteVisitor.mutate(v.id);
+        toast.success(`${v.full_name} converted to candidate!`);
+      }
+    });
+  };
+
     return (
       <DashboardLayout>
         <PageHeader title="Visitors" description="Walk-in visitor registry" icon={UserCheck} />
