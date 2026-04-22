@@ -212,120 +212,95 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Pipeline Funnel */}
+      {/* Pipeline Funnel + Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-        <PipelineFunnel />
-        <div className="lg:col-span-2">
-
-      {/* Recent Activity Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-        {/* Recent Candidates */}
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <h3 className="font-semibold text-foreground">Recent Candidates</h3>
-            <Link
-              to="/candidates"
-              className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
-            >
-              View all <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="divide-y divide-border">
-            {recentCandidates.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">No candidates yet</div>
-            ) : (
-              recentCandidates.map((candidate) => (
-                <div key={candidate.id} className="p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="font-medium text-foreground">{candidate.full_name}</p>
-                      <p className="text-sm text-muted-foreground">{candidate.address}</p>
-                    </div>
-                    <StatusBadge
-                      status={candidate.status}
-                      variant={getStatusVariant(candidate.status)}
-                    />
-                  </div>
-                  <SkillTagList skills={candidate.skills || []} max={3} />
-                </div>
-              ))
-            )}
-          </div>
+        <div className="lg:col-span-1">
+          <PipelineFunnel />
         </div>
 
-        {/* Open Positions */}
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <h3 className="font-semibold text-foreground">Open Positions</h3>
-            <Link
-              to="/jobs"
-              className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
-            >
-              View all <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="divide-y divide-border">
-            {recentJobs.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">No open positions</div>
-            ) : (
-              recentJobs.map((job) => (
-                <div key={job.id} className="p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="font-medium text-foreground">{job.role_title}</p>
-                      <p className="text-sm text-muted-foreground">{job.company_name}</p>
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+          {/* Recent Candidates */}
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="font-semibold text-foreground text-sm">Recent Candidates</h3>
+              <Link to="/candidates" className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
+                View all <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border">
+              {recentCandidates.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">No candidates yet</div>
+              ) : (
+                recentCandidates.map((candidate) => (
+                  <div key={candidate.id} className="p-3 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start justify-between mb-1.5 gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground text-sm truncate">{candidate.full_name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{candidate.address}</p>
+                      </div>
+                      <StatusBadge status={candidate.status} variant={getStatusVariant(candidate.status)} />
                     </div>
-                    <span className="text-sm font-medium text-success">
+                    <SkillTagList skills={candidate.skills || []} max={2} />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Open Positions */}
+          <div className="bg-card rounded-xl border border-border overflow-hidden">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="font-semibold text-foreground text-sm">Open Positions</h3>
+              <Link to="/jobs" className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
+                View all <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border">
+              {recentJobs.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">No open positions</div>
+              ) : (
+                recentJobs.map((job) => (
+                  <div key={job.id} className="p-3 hover:bg-muted/50 transition-colors">
+                    <p className="font-medium text-foreground text-sm truncate">{job.role_title}</p>
+                    <p className="text-xs text-muted-foreground truncate">{job.company_name}</p>
+                    <p className="text-xs text-success font-medium mt-1">
                       NPR {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
-                    </span>
+                    </p>
                   </div>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{job.location}</span>
-                    <span>•</span>
-                    <span>{job.timing}</span>
-                  </div>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
-        </div>
 
-        {/* Vacant Properties */}
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-border">
-            <h3 className="font-semibold text-foreground">Vacant Properties</h3>
-            <Link
-              to="/properties"
-              className="text-sm text-primary hover:text-primary/80 flex items-center gap-1"
-            >
-              View all <ArrowRight className="h-4 w-4" />
-            </Link>
-          </div>
-          <div className="divide-y divide-border">
-            {vacantProperties.length === 0 ? (
-              <div className="p-8 text-center text-muted-foreground">No vacant properties</div>
-            ) : (
-              vacantProperties.map((property) => (
-                <div key={property.id} className="p-4 hover:bg-muted/50 transition-colors">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="font-medium text-foreground">{property.type}</p>
-                      <p className="text-sm text-muted-foreground">{property.location}</p>
+          {/* Vacant Properties */}
+          <div className="bg-card rounded-xl border border-border overflow-hidden sm:col-span-2 xl:col-span-1">
+            <div className="flex items-center justify-between p-4 border-b border-border">
+              <h3 className="font-semibold text-foreground text-sm">Vacant Properties</h3>
+              <Link to="/properties" className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
+                View all <ArrowRight className="h-3 w-3" />
+              </Link>
+            </div>
+            <div className="divide-y divide-border">
+              {vacantProperties.length === 0 ? (
+                <div className="p-6 text-center text-sm text-muted-foreground">No vacant properties</div>
+              ) : (
+                vacantProperties.map((property) => (
+                  <div key={property.id} className="p-3 hover:bg-muted/50 transition-colors">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-foreground text-sm">{property.type}</p>
+                        <p className="text-xs text-muted-foreground truncate">{property.location}</p>
+                      </div>
+                      <span className="text-xs font-medium text-primary whitespace-nowrap">
+                        NPR {property.rent_amount.toLocaleString()}/mo
+                      </span>
                     </div>
-                    <span className="text-sm font-medium text-primary">
-                      NPR {property.rent_amount.toLocaleString()}/mo
-                    </span>
                   </div>
-                  <p className="text-xs text-muted-foreground line-clamp-2">
-                    {property.description}
-                  </p>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
         </div>
-      </div>
-      </div>
       </div>
 
       {/* Recent Placements & Transactions */}
