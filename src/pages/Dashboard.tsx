@@ -2,6 +2,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { StatCard } from '@/components/StatCard';
 import { PageHeader } from '@/components/PageHeader';
 import { PipelineFunnel } from '@/components/PipelineFunnel';
+import { ActionCenter } from '@/components/ActionCenter';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useCandidates } from '@/hooks/useCandidates';
 import { useJobs } from '@/hooks/useJobs';
@@ -71,6 +72,9 @@ const Dashboard = () => {
         title="Dashboard"
         description="Welcome back! Here's an overview of your agency operations."
       />
+
+      {/* Action Center — smart daily reminders */}
+      <ActionCenter />
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">

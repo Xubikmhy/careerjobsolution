@@ -243,15 +243,17 @@ const Candidates = () => {
       remarks: data.remarks || null,
     }, {
       onSuccess: (newCandidate) => {
-        // Log registration activity
+        // Day+1 follow-up: call new candidate to confirm details / discuss next steps
+        const nextDay = new Date();
+        nextDay.setDate(nextDay.getDate() + 1);
         addActivity.mutate({
           candidate_id: newCandidate.id,
           job_id: null,
           activity_type: 'registered',
           status: 'Active',
           placed_at: null,
-          remarks: 'Candidate registered in the system',
-          follow_up_date: null,
+          remarks: 'Candidate registered. Follow up tomorrow to confirm details & discuss matching jobs.',
+          follow_up_date: nextDay.toISOString().split('T')[0],
           follow_up_done: false,
         });
       }
@@ -285,9 +287,9 @@ const Candidates = () => {
     // Update candidate status
     updateCandidate.mutate({ id: data.candidateId, status: 'Sent for Interview' });
 
-    // Log activity with where and why
+    // Log activity with where and why — Day+1 reminder to chase interview result
     const followUp = new Date();
-    followUp.setDate(followUp.getDate() + 2); // 2-day follow-up reminder
+    followUp.setDate(followUp.getDate() + 1);
 
     addActivity.mutate({
       candidate_id: data.candidateId,
@@ -295,7 +297,9 @@ const Candidates = () => {
       activity_type: 'sent_for_interview',
       status: 'Sent for Interview',
       placed_at: data.placedAt,
-      remarks: data.remarks || `Sent to ${data.placedAt} for interview`,
+      remarks: data.remarks
+        ? `Sent to ${data.placedAt}. ${data.remarks}`
+        : `Sent to ${data.placedAt} for interview. Chase result tomorrow.`,
       follow_up_date: followUp.toISOString().split('T')[0],
       follow_up_done: false,
     });
@@ -326,14 +330,24 @@ const Candidates = () => {
       remarks: fullRemarks,
     });
 
+    // Day+3 re-engagement follow-up only when "Not Hired" — otherwise no auto reminder
+    let returnFollowUp: string | null = null;
+    if (returnAction === 'Not Hired') {
+      const d = new Date();
+      d.setDate(d.getDate() + 3);
+      returnFollowUp = d.toISOString().split('T')[0];
+    }
+
     addActivity.mutate({
       candidate_id: remarksCandidate.id,
       job_id: null,
       activity_type: returnAction === 'Not Hired' ? 'not_hired' : 'interview_returned',
       status: finalStatus,
       placed_at: null,
-      remarks: fullRemarks,
-      follow_up_date: null,
+      remarks: returnAction === 'Not Hired'
+        ? `${fullRemarks} — Re-engage in 3 days, find a new vacancy.`
+        : fullRemarks,
+      follow_up_date: returnFollowUp,
       follow_up_done: false,
     });
 
