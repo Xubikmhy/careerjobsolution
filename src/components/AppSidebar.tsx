@@ -19,6 +19,9 @@ import { SidebarNavLink } from './SidebarNavLink';
 import { DarkModeToggle } from './DarkModeToggle';
 import { cn } from '@/lib/utils';
 import { getAgencySettings } from '@/utils/agencySettings';
+import { useCandidateActivities } from '@/hooks/useCandidateActivities';
+import { useCandidates } from '@/hooks/useCandidates';
+import { isPast, isToday, differenceInDays } from 'date-fns';
 
 const recruitmentLinks = [
   { to: '/candidates', icon: Users, label: 'Candidates' },
