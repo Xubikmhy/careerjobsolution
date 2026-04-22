@@ -119,6 +119,9 @@ function CandidateTable({
                       <Button variant="ghost" size="icon" onClick={() => onPlace(candidate)} title="Place Candidate" className="text-success hover:text-success">
                         <CheckCircle2 className="h-4 w-4" />
                       </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onToggleInactive(candidate)} title="Mark Inactive" className="text-muted-foreground hover:text-foreground">
+                        <Archive className="h-4 w-4" />
+                      </Button>
                     </>
                   )}
                   {candidate.status === 'Sent for Interview' && (
@@ -130,6 +133,11 @@ function CandidateTable({
                         <CheckCircle2 className="h-4 w-4" />
                       </Button>
                     </>
+                  )}
+                  {candidate.status === 'Inactive' && (
+                    <Button variant="ghost" size="icon" onClick={() => onToggleInactive(candidate)} title="Reactivate" className="text-success hover:text-success">
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
                   )}
                   <Button variant="ghost" size="icon" onClick={() => onViewTimeline(candidate)} title="View Timeline">
                     <History className="h-4 w-4" />
