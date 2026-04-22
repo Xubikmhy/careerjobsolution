@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download } from 'lucide-react';
+import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
@@ -10,7 +10,7 @@ import { CandidateFormModal } from '@/components/CandidateFormModal';
 import { CandidateTimeline } from '@/components/CandidateTimeline';
 import { SendForInterviewModal } from '@/components/SendForInterviewModal';
 import { PlaceCandidateModal } from '@/components/PlaceCandidateModal';
-import { FollowUpReminders } from '@/components/FollowUpReminders';
+
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -57,6 +57,7 @@ function CandidateTable({
   onReturnInterview,
   onPlace,
   onViewTimeline,
+  onToggleInactive,
 }: {
   candidates: CandidateDB[];
   onView: (c: CandidateDB) => void;
@@ -66,6 +67,7 @@ function CandidateTable({
   onReturnInterview: (c: CandidateDB) => void;
   onPlace: (c: CandidateDB) => void;
   onViewTimeline: (c: CandidateDB) => void;
+  onToggleInactive: (c: CandidateDB) => void;
 }) {
   if (candidates.length === 0) {
     return <p className="text-center py-8 text-muted-foreground">No candidates found</p>;
@@ -117,6 +119,9 @@ function CandidateTable({
                       <Button variant="ghost" size="icon" onClick={() => onPlace(candidate)} title="Place Candidate" className="text-success hover:text-success">
                         <CheckCircle2 className="h-4 w-4" />
                       </Button>
+                      <Button variant="ghost" size="icon" onClick={() => onToggleInactive(candidate)} title="Mark Inactive" className="text-muted-foreground hover:text-foreground">
+                        <Archive className="h-4 w-4" />
+                      </Button>
                     </>
                   )}
                   {candidate.status === 'Sent for Interview' && (
@@ -128,6 +133,11 @@ function CandidateTable({
                         <CheckCircle2 className="h-4 w-4" />
                       </Button>
                     </>
+                  )}
+                  {candidate.status === 'Inactive' && (
+                    <Button variant="ghost" size="icon" onClick={() => onToggleInactive(candidate)} title="Reactivate" className="text-success hover:text-success">
+                      <RefreshCw className="h-4 w-4" />
+                    </Button>
                   )}
                   <Button variant="ghost" size="icon" onClick={() => onViewTimeline(candidate)} title="View Timeline">
                     <History className="h-4 w-4" />
@@ -157,7 +167,7 @@ const Candidates = () => {
   const { candidates, isLoading, addCandidate, updateCandidate, deleteCandidate } = useCandidates();
   const { jobs, updateJob } = useJobs();
   const { addPlacement } = usePlacements();
-  const { allActivities, pendingFollowUps, addActivity, updateActivity } = useCandidateActivities();
+  const { allActivities, addActivity } = useCandidateActivities();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusTab, setStatusTab] = useState('all');
@@ -202,7 +212,7 @@ const Candidates = () => {
 
   // Counts
   const statusCounts = useMemo(() => {
-    const counts = { all: 0, Active: 0, 'Sent for Interview': 0, Placed: 0 };
+    const counts = { all: 0, Active: 0, 'Sent for Interview': 0, Placed: 0, Inactive: 0 };
     candidates.forEach((c) => {
       counts.all++;
       if (c.status in counts) counts[c.status as keyof typeof counts]++;
@@ -413,8 +423,22 @@ const Candidates = () => {
     setPlaceCandidate(null);
   };
 
-  const handleMarkFollowUpDone = (activityId: string) => {
-    updateActivity.mutate({ id: activityId, follow_up_done: true });
+
+  const handleToggleInactive = (c: CandidateDB) => {
+    const newStatus = c.status === 'Inactive' ? 'Active' : 'Inactive';
+    updateCandidate.mutate({ id: c.id, status: newStatus });
+    addActivity.mutate({
+      candidate_id: c.id,
+      job_id: null,
+      activity_type: 'remark',
+      status: newStatus,
+      placed_at: null,
+      remarks: newStatus === 'Inactive'
+        ? 'Marked Inactive — no longer actively job-seeking.'
+        : 'Reactivated — back in the active pool.',
+      follow_up_date: null,
+      follow_up_done: false,
+    });
   };
 
   const tableProps = {
@@ -425,6 +449,7 @@ const Candidates = () => {
     onReturnInterview: handleReturnInterview,
     onPlace: handlePlace,
     onViewTimeline: (c: CandidateDB) => { setTimelineCandidate(c); setIsTimelineOpen(true); },
+    onToggleInactive: handleToggleInactive,
   };
 
   if (isLoading) {
@@ -454,20 +479,14 @@ const Candidates = () => {
         </Button>
       </div>
 
-      {/* Follow-up Reminders */}
-      <FollowUpReminders
-        followUps={pendingFollowUps}
-        candidates={candidates}
-        onMarkDone={handleMarkFollowUpDone}
-      />
-
       {/* Status Tabs */}
       <Tabs value={statusTab} onValueChange={setStatusTab} className="mb-4">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="all">All ({statusCounts.all})</TabsTrigger>
           <TabsTrigger value="Active">Active ({statusCounts.Active})</TabsTrigger>
           <TabsTrigger value="Sent for Interview">Interview ({statusCounts['Sent for Interview']})</TabsTrigger>
           <TabsTrigger value="Placed">Placed ({statusCounts.Placed})</TabsTrigger>
+          <TabsTrigger value="Inactive">Inactive ({statusCounts.Inactive})</TabsTrigger>
         </TabsList>
       </Tabs>
 

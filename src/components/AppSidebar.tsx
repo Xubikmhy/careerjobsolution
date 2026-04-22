@@ -19,6 +19,9 @@ import { SidebarNavLink } from './SidebarNavLink';
 import { DarkModeToggle } from './DarkModeToggle';
 import { cn } from '@/lib/utils';
 import { getAgencySettings } from '@/utils/agencySettings';
+import { useCandidateActivities } from '@/hooks/useCandidateActivities';
+import { useCandidates } from '@/hooks/useCandidates';
+import { isPast, isToday, differenceInDays } from 'date-fns';
 
 const recruitmentLinks = [
   { to: '/candidates', icon: Users, label: 'Candidates' },
@@ -41,7 +44,8 @@ const servicesLinks = [
 ];
 
 export function AppSidebar() {
-  const [isOpen, setIsOpen] = useState(true);
+  // Default closed on small screens, open on lg+ — handled by CSS translate; state only drives mobile drawer
+  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
@@ -49,6 +53,41 @@ export function AppSidebar() {
     const settings = getAgencySettings();
     setLogoUrl(settings.logoUrl);
   }, []);
+
+  // Close drawer on route change (mobile UX)
+  useEffect(() => { setIsOpen(false); }, [location.pathname]);
+
+  // Compute urgent action count for Dashboard badge (overdue + today + 7d-stale Active candidates)
+  const { allActivities } = useCandidateActivities();
+  const { candidates } = useCandidates();
+  const urgentCount = (() => {
+    const candidateMap = new Map(candidates.map((c) => [c.id, c]));
+    let count = 0;
+    const seen = new Set<string>();
+    allActivities.forEach((a) => {
+      if (a.follow_up_done || !a.follow_up_date) return;
+      const c = candidateMap.get(a.candidate_id);
+      if (!c || c.status === 'Placed' || c.status === 'Inactive') return;
+      const d = new Date(a.follow_up_date);
+      if ((isPast(d) || isToday(d))) {
+        seen.add(c.id);
+        count++;
+      }
+    });
+    // stale Active candidates with no open follow-up
+    const lastByCand = new Map<string, Date>();
+    allActivities.forEach((a) => {
+      const ts = new Date(a.created_at);
+      const prev = lastByCand.get(a.candidate_id);
+      if (!prev || ts > prev) lastByCand.set(a.candidate_id, ts);
+    });
+    candidates.forEach((c) => {
+      if (c.status !== 'Active' || seen.has(c.id)) return;
+      const last = lastByCand.get(c.id) || new Date(c.created_at);
+      if (differenceInDays(new Date(), last) >= 7) count++;
+    });
+    return count;
+  })();
 
   return (
     <>
@@ -97,7 +136,7 @@ export function AppSidebar() {
           <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
             {/* Dashboard */}
             <div>
-              <SidebarNavLink to="/" icon={LayoutDashboard} onClick={() => setIsOpen(false)}>
+              <SidebarNavLink to="/" icon={LayoutDashboard} onClick={() => setIsOpen(false)} badge={urgentCount}>
                 Dashboard
               </SidebarNavLink>
             </div>

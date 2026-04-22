@@ -9,7 +9,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
     <div className="min-h-screen bg-background">
       <AppSidebar />
       <main className="lg:ml-64 min-h-screen">
-        <div className="p-4 lg:p-8">
+        {/* Extra top padding on mobile so floating menu button doesn't collide with page header */}
+        <div className="px-4 pt-16 pb-6 lg:p-8">
           {children}
         </div>
       </main>
