@@ -424,6 +424,23 @@ const Candidates = () => {
   };
 
 
+  const handleToggleInactive = (c: CandidateDB) => {
+    const newStatus = c.status === 'Inactive' ? 'Active' : 'Inactive';
+    updateCandidate.mutate({ id: c.id, status: newStatus });
+    addActivity.mutate({
+      candidate_id: c.id,
+      job_id: null,
+      activity_type: 'remark',
+      status: newStatus,
+      placed_at: null,
+      remarks: newStatus === 'Inactive'
+        ? 'Marked Inactive — no longer actively job-seeking.'
+        : 'Reactivated — back in the active pool.',
+      follow_up_date: null,
+      follow_up_done: false,
+    });
+  };
+
   const tableProps = {
     onView: (c: CandidateDB) => { setSelectedCandidate(c); setIsViewOpen(true); },
     onGenerateCV: handleGenerateCV,
@@ -432,6 +449,7 @@ const Candidates = () => {
     onReturnInterview: handleReturnInterview,
     onPlace: handlePlace,
     onViewTimeline: (c: CandidateDB) => { setTimelineCandidate(c); setIsTimelineOpen(true); },
+    onToggleInactive: handleToggleInactive,
   };
 
   if (isLoading) {
