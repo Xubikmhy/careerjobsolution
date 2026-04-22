@@ -202,7 +202,7 @@ const Candidates = () => {
 
   // Counts
   const statusCounts = useMemo(() => {
-    const counts = { all: 0, Active: 0, 'Sent for Interview': 0, Placed: 0 };
+    const counts = { all: 0, Active: 0, 'Sent for Interview': 0, Placed: 0, Inactive: 0 };
     candidates.forEach((c) => {
       counts.all++;
       if (c.status in counts) counts[c.status as keyof typeof counts]++;
@@ -454,20 +454,14 @@ const Candidates = () => {
         </Button>
       </div>
 
-      {/* Follow-up Reminders */}
-      <FollowUpReminders
-        followUps={pendingFollowUps}
-        candidates={candidates}
-        onMarkDone={handleMarkFollowUpDone}
-      />
-
       {/* Status Tabs */}
       <Tabs value={statusTab} onValueChange={setStatusTab} className="mb-4">
-        <TabsList>
+        <TabsList className="flex flex-wrap h-auto">
           <TabsTrigger value="all">All ({statusCounts.all})</TabsTrigger>
           <TabsTrigger value="Active">Active ({statusCounts.Active})</TabsTrigger>
           <TabsTrigger value="Sent for Interview">Interview ({statusCounts['Sent for Interview']})</TabsTrigger>
           <TabsTrigger value="Placed">Placed ({statusCounts.Placed})</TabsTrigger>
+          <TabsTrigger value="Inactive">Inactive ({statusCounts.Inactive})</TabsTrigger>
         </TabsList>
       </Tabs>
 
