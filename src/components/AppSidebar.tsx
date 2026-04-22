@@ -41,7 +41,8 @@ const servicesLinks = [
 ];
 
 export function AppSidebar() {
-  const [isOpen, setIsOpen] = useState(true);
+  // Default closed on small screens, open on lg+ — handled by CSS translate; state only drives mobile drawer
+  const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
@@ -49,6 +50,9 @@ export function AppSidebar() {
     const settings = getAgencySettings();
     setLogoUrl(settings.logoUrl);
   }, []);
+
+  // Close drawer on route change (mobile UX)
+  useEffect(() => { setIsOpen(false); }, [location.pathname]);
 
   return (
     <>
