@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download } from 'lucide-react';
+import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
@@ -57,6 +57,7 @@ function CandidateTable({
   onReturnInterview,
   onPlace,
   onViewTimeline,
+  onToggleInactive,
 }: {
   candidates: CandidateDB[];
   onView: (c: CandidateDB) => void;
@@ -66,6 +67,7 @@ function CandidateTable({
   onReturnInterview: (c: CandidateDB) => void;
   onPlace: (c: CandidateDB) => void;
   onViewTimeline: (c: CandidateDB) => void;
+  onToggleInactive: (c: CandidateDB) => void;
 }) {
   if (candidates.length === 0) {
     return <p className="text-center py-8 text-muted-foreground">No candidates found</p>;
