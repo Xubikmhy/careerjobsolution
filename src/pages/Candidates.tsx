@@ -10,7 +10,7 @@ import { CandidateFormModal } from '@/components/CandidateFormModal';
 import { CandidateTimeline } from '@/components/CandidateTimeline';
 import { SendForInterviewModal } from '@/components/SendForInterviewModal';
 import { PlaceCandidateModal } from '@/components/PlaceCandidateModal';
-import { FollowUpReminders } from '@/components/FollowUpReminders';
+
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -157,7 +157,7 @@ const Candidates = () => {
   const { candidates, isLoading, addCandidate, updateCandidate, deleteCandidate } = useCandidates();
   const { jobs, updateJob } = useJobs();
   const { addPlacement } = usePlacements();
-  const { allActivities, pendingFollowUps, addActivity, updateActivity } = useCandidateActivities();
+  const { allActivities, addActivity, updateActivity } = useCandidateActivities();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusTab, setStatusTab] = useState('all');
