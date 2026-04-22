@@ -192,7 +192,7 @@ export function ActionCenter() {
               </div>
 
               <div className="flex items-center gap-1 shrink-0">
-                <WhatsAppButton phone={item.candidate.phone} variant="icon" />
+                <WhatsAppButton phone={item.candidate.phone} name={item.candidate.full_name} />
                 <Button
                   variant="ghost"
                   size="sm"
