@@ -330,14 +330,24 @@ const Candidates = () => {
       remarks: fullRemarks,
     });
 
+    // Day+3 re-engagement follow-up only when "Not Hired" — otherwise no auto reminder
+    let returnFollowUp: string | null = null;
+    if (returnAction === 'Not Hired') {
+      const d = new Date();
+      d.setDate(d.getDate() + 3);
+      returnFollowUp = d.toISOString().split('T')[0];
+    }
+
     addActivity.mutate({
       candidate_id: remarksCandidate.id,
       job_id: null,
       activity_type: returnAction === 'Not Hired' ? 'not_hired' : 'interview_returned',
       status: finalStatus,
       placed_at: null,
-      remarks: fullRemarks,
-      follow_up_date: null,
+      remarks: returnAction === 'Not Hired'
+        ? `${fullRemarks} — Re-engage in 3 days, find a new vacancy.`
+        : fullRemarks,
+      follow_up_date: returnFollowUp,
       follow_up_done: false,
     });
 
