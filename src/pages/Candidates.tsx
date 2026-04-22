@@ -157,7 +157,7 @@ const Candidates = () => {
   const { candidates, isLoading, addCandidate, updateCandidate, deleteCandidate } = useCandidates();
   const { jobs, updateJob } = useJobs();
   const { addPlacement } = usePlacements();
-  const { allActivities, addActivity, updateActivity } = useCandidateActivities();
+  const { allActivities, addActivity } = useCandidateActivities();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusTab, setStatusTab] = useState('all');
@@ -413,9 +413,6 @@ const Candidates = () => {
     setPlaceCandidate(null);
   };
 
-  const handleMarkFollowUpDone = (activityId: string) => {
-    updateActivity.mutate({ id: activityId, follow_up_done: true });
-  };
 
   const tableProps = {
     onView: (c: CandidateDB) => { setSelectedCandidate(c); setIsViewOpen(true); },
