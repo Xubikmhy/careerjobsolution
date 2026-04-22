@@ -243,15 +243,17 @@ const Candidates = () => {
       remarks: data.remarks || null,
     }, {
       onSuccess: (newCandidate) => {
-        // Log registration activity
+        // Day+1 follow-up: call new candidate to confirm details / discuss next steps
+        const nextDay = new Date();
+        nextDay.setDate(nextDay.getDate() + 1);
         addActivity.mutate({
           candidate_id: newCandidate.id,
           job_id: null,
           activity_type: 'registered',
           status: 'Active',
           placed_at: null,
-          remarks: 'Candidate registered in the system',
-          follow_up_date: null,
+          remarks: 'Candidate registered. Follow up tomorrow to confirm details & discuss matching jobs.',
+          follow_up_date: nextDay.toISOString().split('T')[0],
           follow_up_done: false,
         });
       }
