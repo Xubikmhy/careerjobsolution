@@ -287,9 +287,9 @@ const Candidates = () => {
     // Update candidate status
     updateCandidate.mutate({ id: data.candidateId, status: 'Sent for Interview' });
 
-    // Log activity with where and why
+    // Log activity with where and why — Day+1 reminder to chase interview result
     const followUp = new Date();
-    followUp.setDate(followUp.getDate() + 2); // 2-day follow-up reminder
+    followUp.setDate(followUp.getDate() + 1);
 
     addActivity.mutate({
       candidate_id: data.candidateId,
@@ -297,7 +297,9 @@ const Candidates = () => {
       activity_type: 'sent_for_interview',
       status: 'Sent for Interview',
       placed_at: data.placedAt,
-      remarks: data.remarks || `Sent to ${data.placedAt} for interview`,
+      remarks: data.remarks
+        ? `Sent to ${data.placedAt}. ${data.remarks}`
+        : `Sent to ${data.placedAt} for interview. Chase result tomorrow.`,
       follow_up_date: followUp.toISOString().split('T')[0],
       follow_up_done: false,
     });
