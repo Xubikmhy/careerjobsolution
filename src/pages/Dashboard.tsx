@@ -73,6 +73,9 @@ const Dashboard = () => {
         description="Welcome back! Here's an overview of your agency operations."
       />
 
+      {/* Action Center — smart daily reminders */}
+      <ActionCenter />
+
       {/* Quick Actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
         <Link
