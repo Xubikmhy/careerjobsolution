@@ -2,6 +2,7 @@ import { DashboardLayout } from '@/components/DashboardLayout';
 import { StatCard } from '@/components/StatCard';
 import { PageHeader } from '@/components/PageHeader';
 import { PipelineFunnel } from '@/components/PipelineFunnel';
+import { ActionCenter } from '@/components/ActionCenter';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useCandidates } from '@/hooks/useCandidates';
 import { useJobs } from '@/hooks/useJobs';

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { format, isPast, isToday, isTomorrow, differenceInDays } from 'date-fns';
 import {
   AlertTriangle, Clock, CalendarClock, CheckCircle2, ArrowRight,
-  Phone, UserX, Sparkles, Bell,
+  UserX, Sparkles, Bell,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
