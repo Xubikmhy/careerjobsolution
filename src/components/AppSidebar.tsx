@@ -57,6 +57,38 @@ export function AppSidebar() {
   // Close drawer on route change (mobile UX)
   useEffect(() => { setIsOpen(false); }, [location.pathname]);
 
+  // Compute urgent action count for Dashboard badge (overdue + today + 7d-stale Active candidates)
+  const { allActivities } = useCandidateActivities();
+  const { candidates } = useCandidates();
+  const urgentCount = (() => {
+    const candidateMap = new Map(candidates.map((c) => [c.id, c]));
+    let count = 0;
+    const seen = new Set<string>();
+    allActivities.forEach((a) => {
+      if (a.follow_up_done || !a.follow_up_date) return;
+      const c = candidateMap.get(a.candidate_id);
+      if (!c || c.status === 'Placed' || c.status === 'Inactive') return;
+      const d = new Date(a.follow_up_date);
+      if ((isPast(d) || isToday(d))) {
+        seen.add(c.id);
+        count++;
+      }
+    });
+    // stale Active candidates with no open follow-up
+    const lastByCand = new Map<string, Date>();
+    allActivities.forEach((a) => {
+      const ts = new Date(a.created_at);
+      const prev = lastByCand.get(a.candidate_id);
+      if (!prev || ts > prev) lastByCand.set(a.candidate_id, ts);
+    });
+    candidates.forEach((c) => {
+      if (c.status !== 'Active' || seen.has(c.id)) return;
+      const last = lastByCand.get(c.id) || new Date(c.created_at);
+      if (differenceInDays(new Date(), last) >= 7) count++;
+    });
+    return count;
+  })();
+
   return (
     <>
       {/* Mobile overlay */}
