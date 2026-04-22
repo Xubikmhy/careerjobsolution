@@ -136,7 +136,7 @@ export function AppSidebar() {
           <nav className="flex-1 px-3 py-4 space-y-6 overflow-y-auto">
             {/* Dashboard */}
             <div>
-              <SidebarNavLink to="/" icon={LayoutDashboard} onClick={() => setIsOpen(false)}>
+              <SidebarNavLink to="/" icon={LayoutDashboard} onClick={() => setIsOpen(false)} badge={urgentCount}>
                 Dashboard
               </SidebarNavLink>
             </div>
