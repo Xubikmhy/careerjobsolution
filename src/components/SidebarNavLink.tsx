@@ -7,9 +7,10 @@ interface SidebarNavLinkProps {
   icon: LucideIcon;
   children: React.ReactNode;
   onClick?: () => void;
+  badge?: number;
 }
 
-export function SidebarNavLink({ to, icon: Icon, children, onClick }: SidebarNavLinkProps) {
+export function SidebarNavLink({ to, icon: Icon, children, onClick, badge }: SidebarNavLinkProps) {
   const location = useLocation();
   const isActive = location.pathname === to;
 
@@ -25,7 +26,12 @@ export function SidebarNavLink({ to, icon: Icon, children, onClick }: SidebarNav
       )}
     >
       <Icon className="h-5 w-5 flex-shrink-0" />
-      <span>{children}</span>
+      <span className="flex-1">{children}</span>
+      {badge !== undefined && badge > 0 && (
+        <span className="ml-auto inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-destructive text-destructive-foreground text-[10px] font-semibold">
+          {badge > 99 ? '99+' : badge}
+        </span>
+      )}
     </RouterNavLink>
   );
 }
