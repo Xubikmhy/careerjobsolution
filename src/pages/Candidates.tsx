@@ -615,6 +615,46 @@ const Candidates = () => {
         </Button>
       </div>
 
+      {/* Bulk action toolbar */}
+      <AnimatePresence>
+        {selected.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-4 flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-primary/10 border border-primary/30"
+          >
+            <Badge variant="default" className="text-sm">{selected.size} selected</Badge>
+            <span className="text-sm text-muted-foreground hidden sm:inline">Bulk actions:</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="gap-1">Set Status</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {STATUS_OPTIONS.map((s) => (
+                  <DropdownMenuItem key={s} onClick={() => handleBulkStatus(s)}>{s}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => {
+              const rows = candidates.filter(c => selected.has(c.id)).map(c => ({
+                Name: c.full_name, Phone: c.phone, Address: c.address, Skills: (c.skills || []).join(', '),
+                Experience: c.experience_years, Salary: c.expected_salary, Status: c.status,
+              }));
+              exportToCSV(rows, 'candidates_selected');
+            }}>
+              <Download className="h-4 w-4" /> Export
+            </Button>
+            <Button size="sm" variant="destructive" className="gap-1" onClick={handleBulkDelete}>
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+            <Button size="sm" variant="ghost" className="gap-1 ml-auto" onClick={clearSelection}>
+              <X className="h-4 w-4" /> Clear
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Content */}
       <AnimatePresence mode="wait">
         <motion.div key={statusTab + (groupBySkills ? '-grouped' : '')} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.2 }}>
