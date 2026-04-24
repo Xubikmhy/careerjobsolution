@@ -7,7 +7,7 @@ import { SearchFilterBar } from '@/components/SearchFilterBar';
 import { StatusBadge, getStatusVariant } from '@/components/StatusBadge';
 import { SkillTagList } from '@/components/SkillTag';
 import { CandidateFormModal } from '@/components/CandidateFormModal';
-import { CandidateTimeline } from '@/components/CandidateTimeline';
+import { CandidateDetailDrawer } from '@/components/CandidateDetailDrawer';
 import { SendForInterviewModal } from '@/components/SendForInterviewModal';
 import { PlaceCandidateModal } from '@/components/PlaceCandidateModal';
 
