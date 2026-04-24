@@ -277,6 +277,11 @@ const Visitors = () => {
             <div className="space-y-2">
               <Label>Phone *</Label>
               <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Contact number" />
+              {duplicateWarning && (
+                <p className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-md px-2 py-1.5">
+                  ⚠️ {duplicateWarning}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Address</Label>
