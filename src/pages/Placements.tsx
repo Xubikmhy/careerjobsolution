@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Trophy,
   Plus,
@@ -52,11 +53,21 @@ const Placements = () => {
   const { tenants } = useTenants();
   const { properties } = useProperties();
 
+  const [searchParams, setSearchParams] = useSearchParams();
   const [isJobFormOpen, setIsJobFormOpen] = useState(false);
   const [isRentalFormOpen, setIsRentalFormOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('jobs');
   const [editPlacement, setEditPlacement] = useState<PlacementDB | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
+
+  // Auto-open the appropriate form when triggered via FAB
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      setIsJobFormOpen(true);
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const [jobFormData, setJobFormData] = useState({
     candidateId: '', jobId: '', agreedSalary: '', notes: '',

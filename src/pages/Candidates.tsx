@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw } from 'lucide-react';
+import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw, X } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
@@ -18,6 +18,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -35,6 +42,9 @@ import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const STATUS_OPTIONS = ['Active', 'Sent for Interview', 'Placed', 'Inactive'] as const;
+
+
 // ── Helpers ──────────────────────────────────────────────
 function groupBySkill(candidates: CandidateDB[]) {
   const groups: Record<string, CandidateDB[]> = {};
@@ -50,6 +60,9 @@ function groupBySkill(candidates: CandidateDB[]) {
 // ── Candidate Table ─────────────────────────────────────
 function CandidateTable({
   candidates,
+  selected,
+  onToggleOne,
+  onToggleAll,
   onView,
   onGenerateCV,
   onDelete,
@@ -58,8 +71,12 @@ function CandidateTable({
   onPlace,
   onViewTimeline,
   onToggleInactive,
+  onInlineStatusChange,
 }: {
   candidates: CandidateDB[];
+  selected: Set<string>;
+  onToggleOne: (id: string) => void;
+  onToggleAll: (ids: string[], allSelected: boolean) => void;
   onView: (c: CandidateDB) => void;
   onGenerateCV: (c: CandidateDB) => void;
   onDelete: (id: string) => void;
@@ -68,16 +85,28 @@ function CandidateTable({
   onPlace: (c: CandidateDB) => void;
   onViewTimeline: (c: CandidateDB) => void;
   onToggleInactive: (c: CandidateDB) => void;
+  onInlineStatusChange: (c: CandidateDB, newStatus: string) => void;
 }) {
   if (candidates.length === 0) {
     return <p className="text-center py-8 text-muted-foreground">No candidates found</p>;
   }
+
+  const allIds = candidates.map((c) => c.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const someSelected = allIds.some((id) => selected.has(id));
 
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10">
+              <Checkbox
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                onCheckedChange={() => onToggleAll(allIds, allSelected)}
+                aria-label="Select all"
+              />
+            </TableHead>
             <TableHead>Name</TableHead>
             <TableHead className="hidden md:table-cell">Address</TableHead>
             <TableHead className="hidden lg:table-cell">Skills</TableHead>
@@ -90,7 +119,14 @@ function CandidateTable({
         </TableHeader>
         <TableBody>
           {candidates.map((candidate) => (
-            <TableRow key={candidate.id} className="hover:bg-muted/50">
+            <TableRow key={candidate.id} className="hover:bg-muted/50" data-state={selected.has(candidate.id) ? 'selected' : undefined}>
+              <TableCell>
+                <Checkbox
+                  checked={selected.has(candidate.id)}
+                  onCheckedChange={() => onToggleOne(candidate.id)}
+                  aria-label={`Select ${candidate.full_name}`}
+                />
+              </TableCell>
               <TableCell>
                 <div>
                   <p className="font-medium text-foreground">{candidate.full_name}</p>
@@ -104,7 +140,29 @@ function CandidateTable({
               <TableCell className="hidden sm:table-cell text-muted-foreground">{candidate.experience_years} yrs</TableCell>
               <TableCell className="font-medium">NPR {candidate.expected_salary?.toLocaleString()}</TableCell>
               <TableCell>
-                <StatusBadge status={candidate.status} variant={getStatusVariant(candidate.status)} />
+                {/* Inline status edit — click badge to change */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-opacity hover:opacity-80"
+                      title="Click to change status"
+                    >
+                      <StatusBadge status={candidate.status} variant={getStatusVariant(candidate.status)} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {STATUS_OPTIONS.map((s) => (
+                      <DropdownMenuItem
+                        key={s}
+                        disabled={s === candidate.status}
+                        onClick={() => onInlineStatusChange(candidate, s)}
+                      >
+                        {s}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
               <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                 {candidate.created_at ? format(new Date(candidate.created_at), 'MMM d, yyyy') : '-'}
@@ -175,6 +233,52 @@ const Candidates = () => {
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateDB | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [groupBySkills, setGroupBySkills] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = (ids: string[], allSelected: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) ids.forEach((id) => next.delete(id));
+      else ids.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+  const clearSelection = () => setSelected(new Set());
+
+  const handleInlineStatusChange = (c: CandidateDB, newStatus: string) => {
+    updateCandidate.mutate({ id: c.id, status: newStatus });
+    addActivity.mutate({
+      candidate_id: c.id,
+      job_id: null,
+      activity_type: 'remark',
+      status: newStatus,
+      placed_at: null,
+      remarks: `Status changed inline: ${c.status} → ${newStatus}`,
+      follow_up_date: null,
+      follow_up_done: false,
+    });
+  };
+
+  const handleBulkStatus = (newStatus: string) => {
+    selected.forEach((id) => {
+      updateCandidate.mutate({ id, status: newStatus });
+    });
+    toast({ title: 'Bulk update', description: `Updated ${selected.size} candidate(s) → ${newStatus}` });
+    clearSelection();
+  };
+
+  const handleBulkDelete = () => {
+    if (!confirm(`Delete ${selected.size} candidate(s)? This cannot be undone.`)) return;
+    selected.forEach((id) => deleteCandidate.mutate(id));
+    clearSelection();
+  };
 
   // Interview modals
   const [interviewCandidate, setInterviewCandidate] = useState<CandidateDB | null>(null);
@@ -442,6 +546,9 @@ const Candidates = () => {
   };
 
   const tableProps = {
+    selected,
+    onToggleOne: toggleOne,
+    onToggleAll: toggleAll,
     onView: (c: CandidateDB) => { setSelectedCandidate(c); setIsViewOpen(true); },
     onGenerateCV: handleGenerateCV,
     onDelete: (id: string) => deleteCandidate.mutate(id),
@@ -450,6 +557,7 @@ const Candidates = () => {
     onPlace: handlePlace,
     onViewTimeline: (c: CandidateDB) => { setTimelineCandidate(c); setIsTimelineOpen(true); },
     onToggleInactive: handleToggleInactive,
+    onInlineStatusChange: handleInlineStatusChange,
   };
 
   if (isLoading) {
@@ -506,6 +614,46 @@ const Candidates = () => {
           Group by Skill
         </Button>
       </div>
+
+      {/* Bulk action toolbar */}
+      <AnimatePresence>
+        {selected.size > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="mb-4 flex flex-wrap items-center gap-2 px-4 py-3 rounded-xl bg-primary/10 border border-primary/30"
+          >
+            <Badge variant="default" className="text-sm">{selected.size} selected</Badge>
+            <span className="text-sm text-muted-foreground hidden sm:inline">Bulk actions:</span>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" className="gap-1">Set Status</Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {STATUS_OPTIONS.map((s) => (
+                  <DropdownMenuItem key={s} onClick={() => handleBulkStatus(s)}>{s}</DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="sm" variant="outline" className="gap-1" onClick={() => {
+              const rows = candidates.filter(c => selected.has(c.id)).map(c => ({
+                Name: c.full_name, Phone: c.phone, Address: c.address, Skills: (c.skills || []).join(', '),
+                Experience: c.experience_years, Salary: c.expected_salary, Status: c.status,
+              }));
+              exportToCSV(rows, 'candidates_selected');
+            }}>
+              <Download className="h-4 w-4" /> Export
+            </Button>
+            <Button size="sm" variant="destructive" className="gap-1" onClick={handleBulkDelete}>
+              <Trash2 className="h-4 w-4" /> Delete
+            </Button>
+            <Button size="sm" variant="ghost" className="gap-1 ml-auto" onClick={clearSelection}>
+              <X className="h-4 w-4" /> Clear
+            </Button>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Content */}
       <AnimatePresence mode="wait">

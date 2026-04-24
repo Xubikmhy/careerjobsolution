@@ -31,6 +31,7 @@ import { Candidate, WorkExperience } from '@/types';
 import { SkillTag } from '@/components/SkillTag';
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCandidates } from '@/hooks/useCandidates';
 
 const candidateSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -102,6 +103,7 @@ export function CandidateFormModal({
   onSubmit,
   initialData,
 }: CandidateFormModalProps) {
+  const { candidates } = useCandidates();
   const [skills, setSkills] = useState<string[]>(initialData?.skills || []);
   const [skillInput, setSkillInput] = useState('');
   const [languages, setLanguages] = useState<string[]>(initialData?.languages || ['Nepali']);
@@ -267,15 +269,26 @@ export function CandidateFormModal({
                   <FormField
                     control={form.control}
                     name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Phone Number *</FormLabel>
-                        <FormControl>
-                          <Input placeholder="+977-98XXXXXXXX" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
+                    render={({ field }) => {
+                      const norm = (field.value || '').replace(/\D/g, '').slice(-10);
+                      const dup = norm.length >= 7
+                        ? candidates.find(c => c.id !== initialData?.id && c.phone.replace(/\D/g, '').slice(-10) === norm)
+                        : null;
+                      return (
+                        <FormItem>
+                          <FormLabel>Phone Number *</FormLabel>
+                          <FormControl>
+                            <Input placeholder="+977-98XXXXXXXX" {...field} />
+                          </FormControl>
+                          {dup && (
+                            <p className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-md px-2 py-1.5">
+                              ⚠️ Candidate "{dup.full_name}" already exists with this phone ({dup.status}).
+                            </p>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
                   />
                 </div>
 

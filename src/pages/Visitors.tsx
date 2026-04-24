@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { UserCheck, Plus, Trash2, Edit2, MapPin, Search, UserPlus, Download } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -26,12 +26,23 @@ import { toast } from 'sonner';
 
 const Visitors = () => {
   const { visitors, isLoading, addVisitor, updateVisitor, deleteVisitor } = useVisitors();
-  const { addCandidate } = useCandidates();
+  const { addCandidate, candidates } = useCandidates();
   const { addActivity } = useCandidateActivities();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingVisitor, setEditingVisitor] = useState<VisitorDB | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+
+  // Auto-open form via FAB
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      setIsFormOpen(true);
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Form state
   const [fullName, setFullName] = useState('');
@@ -71,6 +82,23 @@ const Visitors = () => {
     setRemarks(v.remarks || '');
     setIsFormOpen(true);
   };
+
+  // Duplicate phone detection — checks both visitor and candidate registries
+  const checkDuplicate = (p: string) => {
+    if (!p || p.length < 4) return null;
+    const norm = p.replace(/\D/g, '').slice(-10);
+    if (!norm) return null;
+    const dupVisitor = visitors.find(v => v.id !== editingVisitor?.id && v.phone.replace(/\D/g, '').slice(-10) === norm);
+    if (dupVisitor) return `Visitor "${dupVisitor.full_name}" already registered with this phone.`;
+    const dupCandidate = candidates.find(c => c.phone.replace(/\D/g, '').slice(-10) === norm);
+    if (dupCandidate) return `Candidate "${dupCandidate.full_name}" already exists with this phone.`;
+    return null;
+  };
+
+  useEffect(() => {
+    setDuplicateWarning(checkDuplicate(phone));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phone, visitors, candidates, editingVisitor]);
 
   const handleSubmit = () => {
     if (!fullName || !phone) return;
@@ -249,6 +277,11 @@ const Visitors = () => {
             <div className="space-y-2">
               <Label>Phone *</Label>
               <Input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Contact number" />
+              {duplicateWarning && (
+                <p className="text-xs text-warning bg-warning/10 border border-warning/30 rounded-md px-2 py-1.5">
+                  ⚠️ {duplicateWarning}
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Address</Label>
