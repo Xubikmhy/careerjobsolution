@@ -233,6 +233,52 @@ const Candidates = () => {
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateDB | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
   const [groupBySkills, setGroupBySkills] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleOne = (id: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+  const toggleAll = (ids: string[], allSelected: boolean) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) ids.forEach((id) => next.delete(id));
+      else ids.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+  const clearSelection = () => setSelected(new Set());
+
+  const handleInlineStatusChange = (c: CandidateDB, newStatus: string) => {
+    updateCandidate.mutate({ id: c.id, status: newStatus });
+    addActivity.mutate({
+      candidate_id: c.id,
+      job_id: null,
+      activity_type: 'remark',
+      status: newStatus,
+      placed_at: null,
+      remarks: `Status changed inline: ${c.status} → ${newStatus}`,
+      follow_up_date: null,
+      follow_up_done: false,
+    });
+  };
+
+  const handleBulkStatus = (newStatus: string) => {
+    selected.forEach((id) => {
+      updateCandidate.mutate({ id, status: newStatus });
+    });
+    toast({ title: 'Bulk update', description: `Updated ${selected.size} candidate(s) → ${newStatus}` });
+    clearSelection();
+  };
+
+  const handleBulkDelete = () => {
+    if (!confirm(`Delete ${selected.size} candidate(s)? This cannot be undone.`)) return;
+    selected.forEach((id) => deleteCandidate.mutate(id));
+    clearSelection();
+  };
 
   // Interview modals
   const [interviewCandidate, setInterviewCandidate] = useState<CandidateDB | null>(null);
@@ -500,6 +546,9 @@ const Candidates = () => {
   };
 
   const tableProps = {
+    selected,
+    onToggleOne: toggleOne,
+    onToggleAll: toggleAll,
     onView: (c: CandidateDB) => { setSelectedCandidate(c); setIsViewOpen(true); },
     onGenerateCV: handleGenerateCV,
     onDelete: (id: string) => deleteCandidate.mutate(id),
@@ -508,6 +557,7 @@ const Candidates = () => {
     onPlace: handlePlace,
     onViewTimeline: (c: CandidateDB) => { setTimelineCandidate(c); setIsTimelineOpen(true); },
     onToggleInactive: handleToggleInactive,
+    onInlineStatusChange: handleInlineStatusChange,
   };
 
   if (isLoading) {
