@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw } from 'lucide-react';
+import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw, X } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
@@ -18,6 +18,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -34,6 +41,9 @@ import { exportToCSV } from '@/utils/exportData';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
+
+const STATUS_OPTIONS = ['Active', 'Sent for Interview', 'Placed', 'Inactive'] as const;
+
 
 // ── Helpers ──────────────────────────────────────────────
 function groupBySkill(candidates: CandidateDB[]) {
