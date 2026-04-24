@@ -337,13 +337,14 @@ const Candidates = () => {
 
   const skillGroups = useMemo(() => groupBySkill(filteredCandidates), [filteredCandidates]);
 
-  // Timeline activities for a specific candidate
+  // Timeline activities for whichever candidate is open in the drawer
+  const activeDrawerCandidate = timelineCandidate || selectedCandidate;
   const timelineActivities = useMemo(() => {
-    if (!timelineCandidate) return [];
+    if (!activeDrawerCandidate) return [];
     return allActivities
-      .filter(a => a.candidate_id === timelineCandidate.id)
+      .filter(a => a.candidate_id === activeDrawerCandidate.id)
       .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  }, [allActivities, timelineCandidate]);
+  }, [allActivities, activeDrawerCandidate]);
 
   const handleAddCandidate = (data: Omit<Candidate, 'id' | 'createdAt'>) => {
     addCandidate.mutate({
