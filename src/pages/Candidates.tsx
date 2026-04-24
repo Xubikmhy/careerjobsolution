@@ -60,6 +60,9 @@ function groupBySkill(candidates: CandidateDB[]) {
 // ── Candidate Table ─────────────────────────────────────
 function CandidateTable({
   candidates,
+  selected,
+  onToggleOne,
+  onToggleAll,
   onView,
   onGenerateCV,
   onDelete,
@@ -68,8 +71,12 @@ function CandidateTable({
   onPlace,
   onViewTimeline,
   onToggleInactive,
+  onInlineStatusChange,
 }: {
   candidates: CandidateDB[];
+  selected: Set<string>;
+  onToggleOne: (id: string) => void;
+  onToggleAll: (ids: string[], allSelected: boolean) => void;
   onView: (c: CandidateDB) => void;
   onGenerateCV: (c: CandidateDB) => void;
   onDelete: (id: string) => void;
@@ -78,16 +85,28 @@ function CandidateTable({
   onPlace: (c: CandidateDB) => void;
   onViewTimeline: (c: CandidateDB) => void;
   onToggleInactive: (c: CandidateDB) => void;
+  onInlineStatusChange: (c: CandidateDB, newStatus: string) => void;
 }) {
   if (candidates.length === 0) {
     return <p className="text-center py-8 text-muted-foreground">No candidates found</p>;
   }
+
+  const allIds = candidates.map((c) => c.id);
+  const allSelected = allIds.length > 0 && allIds.every((id) => selected.has(id));
+  const someSelected = allIds.some((id) => selected.has(id));
 
   return (
     <div className="bg-card rounded-xl border border-border overflow-hidden">
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead className="w-10">
+              <Checkbox
+                checked={allSelected ? true : someSelected ? 'indeterminate' : false}
+                onCheckedChange={() => onToggleAll(allIds, allSelected)}
+                aria-label="Select all"
+              />
+            </TableHead>
             <TableHead>Name</TableHead>
             <TableHead className="hidden md:table-cell">Address</TableHead>
             <TableHead className="hidden lg:table-cell">Skills</TableHead>
@@ -100,7 +119,14 @@ function CandidateTable({
         </TableHeader>
         <TableBody>
           {candidates.map((candidate) => (
-            <TableRow key={candidate.id} className="hover:bg-muted/50">
+            <TableRow key={candidate.id} className="hover:bg-muted/50" data-state={selected.has(candidate.id) ? 'selected' : undefined}>
+              <TableCell>
+                <Checkbox
+                  checked={selected.has(candidate.id)}
+                  onCheckedChange={() => onToggleOne(candidate.id)}
+                  aria-label={`Select ${candidate.full_name}`}
+                />
+              </TableCell>
               <TableCell>
                 <div>
                   <p className="font-medium text-foreground">{candidate.full_name}</p>
@@ -114,7 +140,29 @@ function CandidateTable({
               <TableCell className="hidden sm:table-cell text-muted-foreground">{candidate.experience_years} yrs</TableCell>
               <TableCell className="font-medium">NPR {candidate.expected_salary?.toLocaleString()}</TableCell>
               <TableCell>
-                <StatusBadge status={candidate.status} variant={getStatusVariant(candidate.status)} />
+                {/* Inline status edit — click badge to change */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-opacity hover:opacity-80"
+                      title="Click to change status"
+                    >
+                      <StatusBadge status={candidate.status} variant={getStatusVariant(candidate.status)} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    {STATUS_OPTIONS.map((s) => (
+                      <DropdownMenuItem
+                        key={s}
+                        disabled={s === candidate.status}
+                        onClick={() => onInlineStatusChange(candidate, s)}
+                      >
+                        {s}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </TableCell>
               <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                 {candidate.created_at ? format(new Date(candidate.created_at), 'MMM d, yyyy') : '-'}
