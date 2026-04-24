@@ -31,6 +31,7 @@ import { Candidate, WorkExperience } from '@/types';
 import { SkillTag } from '@/components/SkillTag';
 import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useCandidates } from '@/hooks/useCandidates';
 
 const candidateSchema = z.object({
   fullName: z.string().min(2, 'Name must be at least 2 characters'),
@@ -102,6 +103,7 @@ export function CandidateFormModal({
   onSubmit,
   initialData,
 }: CandidateFormModalProps) {
+  const { candidates } = useCandidates();
   const [skills, setSkills] = useState<string[]>(initialData?.skills || []);
   const [skillInput, setSkillInput] = useState('');
   const [languages, setLanguages] = useState<string[]>(initialData?.languages || ['Nepali']);
