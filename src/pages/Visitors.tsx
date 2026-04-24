@@ -26,12 +26,23 @@ import { toast } from 'sonner';
 
 const Visitors = () => {
   const { visitors, isLoading, addVisitor, updateVisitor, deleteVisitor } = useVisitors();
-  const { addCandidate } = useCandidates();
+  const { addCandidate, candidates } = useCandidates();
   const { addActivity } = useCandidateActivities();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingVisitor, setEditingVisitor] = useState<VisitorDB | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<string | null>(null);
+
+  // Auto-open form via FAB
+  useEffect(() => {
+    if (searchParams.get('action') === 'add') {
+      setIsFormOpen(true);
+      searchParams.delete('action');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   // Form state
   const [fullName, setFullName] = useState('');
