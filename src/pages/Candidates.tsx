@@ -224,7 +224,7 @@ const Candidates = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { candidates, isLoading, addCandidate, updateCandidate, deleteCandidate } = useCandidates();
   const { jobs, updateJob } = useJobs();
-  const { addPlacement } = usePlacements();
+  const { addPlacement, placements } = usePlacements();
   const { allActivities, addActivity } = useCandidateActivities();
 
   const [searchQuery, setSearchQuery] = useState('');
