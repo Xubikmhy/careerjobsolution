@@ -757,79 +757,45 @@ const Candidates = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Candidate Timeline Modal */}
-      <Dialog open={isTimelineOpen} onOpenChange={setIsTimelineOpen}>
-        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <History className="h-5 w-5 text-primary" />
-              Lifecycle Timeline - {timelineCandidate?.full_name}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
-            {timelineCandidate && (
-              <div className="flex items-center gap-2 mb-4 p-3 bg-muted/50 rounded-lg">
-                <StatusBadge status={timelineCandidate.status} variant={getStatusVariant(timelineCandidate.status)} />
-                <span className="text-sm text-muted-foreground">
-                  Registered: {timelineCandidate.created_at ? format(new Date(timelineCandidate.created_at), 'MMM d, yyyy') : '-'}
-                </span>
-              </div>
-            )}
-            <CandidateTimeline activities={timelineActivities} jobNames={jobNames} />
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* View Candidate Modal */}
-      <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Candidate Details</DialogTitle>
-          </DialogHeader>
-          {selectedCandidate && (
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold text-foreground">{selectedCandidate.full_name}</h3>
-                  <p className="text-muted-foreground">{selectedCandidate.address}</p>
-                </div>
-                <StatusBadge status={selectedCandidate.status} variant={getStatusVariant(selectedCandidate.status)} />
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><p className="text-muted-foreground">Phone</p><p className="font-medium">{selectedCandidate.phone}</p></div>
-                <div><p className="text-muted-foreground">Education</p><p className="font-medium">{selectedCandidate.education_level}</p></div>
-                <div><p className="text-muted-foreground">Experience</p><p className="font-medium">{selectedCandidate.experience_years} years</p></div>
-                <div><p className="text-muted-foreground">Expected Salary</p><p className="font-medium">NPR {selectedCandidate.expected_salary?.toLocaleString()}</p></div>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm mb-2">Skills</p>
-                <SkillTagList skills={selectedCandidate.skills || []} max={10} />
-              </div>
-              {selectedCandidate.remarks && (
-                <div className="p-3 bg-muted/50 rounded-lg">
-                  <p className="text-muted-foreground text-sm mb-1">Remarks / Interview Feedback</p>
-                  <p className="text-foreground text-sm">{selectedCandidate.remarks}</p>
-                </div>
-              )}
-              {selectedCandidate.reference_info && (
-                <div><p className="text-muted-foreground text-sm mb-1">References</p><p className="text-foreground">{selectedCandidate.reference_info}</p></div>
-              )}
-              <div className="flex gap-2 pt-4 border-t border-border">
-                <Button onClick={() => handleGenerateCV(selectedCandidate)} className="flex-1 gap-2">
-                  <FileText className="h-4 w-4" />Generate CV
-                </Button>
-                <Button variant="outline" onClick={() => {
-                  setIsViewOpen(false);
-                  setTimelineCandidate(selectedCandidate);
-                  setIsTimelineOpen(true);
-                }} className="gap-2">
-                  <History className="h-4 w-4" />Timeline
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* 360° Candidate Detail Drawer — replaces old details + timeline modals */}
+      <CandidateDetailDrawer
+        open={isTimelineOpen || isViewOpen}
+        onOpenChange={(o) => {
+          if (!o) {
+            setIsTimelineOpen(false);
+            setIsViewOpen(false);
+            setTimelineCandidate(null);
+            setSelectedCandidate(null);
+          }
+        }}
+        candidate={timelineCandidate || selectedCandidate}
+        activities={timelineActivities}
+        placements={placements}
+        jobNames={jobNames}
+        onGenerateCV={handleGenerateCV}
+        onSendInterview={(c) => {
+          setIsTimelineOpen(false);
+          setIsViewOpen(false);
+          handleSendInterview(c);
+        }}
+        onPlace={(c) => {
+          setIsTimelineOpen(false);
+          setIsViewOpen(false);
+          handlePlace(c);
+        }}
+        onAddNote={(candidateId, noteText) => {
+          addActivity.mutate({
+            candidate_id: candidateId,
+            job_id: null,
+            activity_type: 'remark',
+            status: (timelineCandidate || selectedCandidate)?.status || 'Active',
+            placed_at: null,
+            remarks: noteText,
+            follow_up_date: null,
+            follow_up_done: false,
+          });
+        }}
+      />
     </DashboardLayout>
   );
 };
