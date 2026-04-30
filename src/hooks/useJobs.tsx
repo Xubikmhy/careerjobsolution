@@ -17,6 +17,7 @@ export interface JobDB {
   status: string;
   remarks: string | null;
   created_at: string;
+  expires_at: string | null;
 }
 
 export function useJobs() {
