@@ -326,7 +326,7 @@ const Jobs = () => {
         searchPlaceholder="Search by role, company, or location..."
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Filled', label: 'Filled' }, { value: 'Closed', label: 'Closed' }] }]}
+        filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Filled', label: 'Fulfilled' }, { value: 'Expired', label: 'Expired' }, { value: 'Closed', label: 'Closed' }] }]}
         className="mb-4"
       />
 
@@ -420,6 +420,10 @@ const Jobs = () => {
                   ))}
                 </div>
               )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Expires On (optional)</Label><Input type="date" value={formData.expiresAt} onChange={(e) => setFormData(p => ({ ...p, expiresAt: e.target.value }))} /></div>
+              <div className="space-y-2"><Label className="opacity-0 hidden md:block">spacer</Label><p className="text-xs text-muted-foreground">Vacancy is auto-flagged Expired after this date.</p></div>
             </div>
             <div className="space-y-2"><Label>Remarks</Label><Textarea placeholder="Internal notes..." value={formData.remarks} onChange={(e) => setFormData(p => ({ ...p, remarks: e.target.value }))} /></div>
             <div className="flex justify-end gap-3 pt-4 border-t border-border">
