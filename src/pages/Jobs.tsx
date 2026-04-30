@@ -194,14 +194,17 @@ const Jobs = () => {
     return map;
   }, [candidates]);
 
-  const renderJobCard = useCallback((job: JobDB, index: number) => (
+  const renderJobCard = useCallback((job: JobDB, index: number) => {
+    const eff = effectiveStatus(job);
+    const expired = isExpired(job);
+    return (
     <motion.div
       key={job.id}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="bg-card rounded-xl border border-border p-5 hover:shadow-lg transition-shadow cursor-pointer"
+      className={`bg-card rounded-xl border p-5 hover:shadow-lg transition-shadow cursor-pointer ${expired ? 'border-destructive/30' : 'border-border'}`}
       onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}
     >
       <div className="flex items-start justify-between mb-3">
@@ -209,18 +212,30 @@ const Jobs = () => {
           <h3 className="font-semibold text-foreground">{job.role_title}</h3>
           <p className="text-sm text-muted-foreground">{job.company_name}</p>
         </div>
-        <StatusBadge status={job.status} variant={getStatusVariant(job.status)} />
+        <div className="flex items-center gap-1">
+          {eff === 'Filled' && <CheckCircle2 className="h-4 w-4 text-primary" />}
+          {expired && <Clock className="h-4 w-4 text-destructive" />}
+          <StatusBadge status={eff} variant={getStatusVariant(eff)} />
+        </div>
       </div>
       <div className="space-y-2 mb-4">
         <p className="text-lg font-bold text-success">
           NPR {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
         </p>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
           <span>{job.location}</span>
           <span>•</span>
           <span>{job.timing}</span>
           <span>•</span>
           <span>{job.created_at ? format(new Date(job.created_at), 'MMM d, yyyy') : ''}</span>
+          {job.expires_at && (
+            <>
+              <span>•</span>
+              <span className={expired ? 'text-destructive font-medium' : 'text-warning'}>
+                {expired ? 'Expired' : 'Expires'} {format(new Date(job.expires_at), 'MMM d')}
+              </span>
+            </>
+          )}
         </div>
       </div>
       <SkillTagList skills={job.required_skills || []} max={3} className="mb-4" />
@@ -241,6 +256,35 @@ const Jobs = () => {
           <Sparkles className="h-4 w-4 text-primary" />
           AI Match
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" title="Change status">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {job.status !== 'Open' && (
+              <DropdownMenuItem onClick={() => handleSetStatus(job, 'Open')}>
+                <RefreshCw className="h-4 w-4 mr-2 text-success" /> Reopen
+              </DropdownMenuItem>
+            )}
+            {job.status !== 'Filled' && (
+              <DropdownMenuItem onClick={() => handleSetStatus(job, 'Filled')}>
+                <CheckCircle2 className="h-4 w-4 mr-2 text-primary" /> Mark Fulfilled
+              </DropdownMenuItem>
+            )}
+            {job.status !== 'Expired' && (
+              <DropdownMenuItem onClick={() => handleSetStatus(job, 'Expired')}>
+                <Clock className="h-4 w-4 mr-2 text-destructive" /> Mark Expired
+              </DropdownMenuItem>
+            )}
+            {job.status !== 'Closed' && (
+              <DropdownMenuItem onClick={() => handleSetStatus(job, 'Closed')}>
+                <XCircle className="h-4 w-4 mr-2 text-muted-foreground" /> Close
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button variant="ghost" size="sm" onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}>
           <Eye className="h-4 w-4" />
         </Button>
@@ -249,7 +293,8 @@ const Jobs = () => {
         </Button>
       </div>
     </motion.div>
-  ), [candidates, deleteJob]);
+    );
+  }, [candidates, deleteJob, updateJob]);
 
   if (isLoading) {
     return (
