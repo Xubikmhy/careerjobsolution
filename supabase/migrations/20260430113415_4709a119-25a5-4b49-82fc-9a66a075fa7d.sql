@@ -1,0 +1,1 @@
+ALTER TABLE public.job_requirements ADD COLUMN IF NOT EXISTS expires_at date;
