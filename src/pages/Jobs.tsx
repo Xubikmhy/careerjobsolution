@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2 } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2, MoreVertical, CheckCircle2, XCircle, RefreshCw, Clock } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
@@ -25,6 +25,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useJobs, JobDB } from '@/hooks/useJobs';
 import { useCandidates, CandidateDB } from '@/hooks/useCandidates';
 import { useCandidateActivities } from '@/hooks/useCandidateActivities';
@@ -37,7 +43,7 @@ import { format } from 'date-fns';
 
 const Jobs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { jobs, isLoading, addJob, deleteJob } = useJobs();
+  const { jobs, isLoading, addJob, updateJob, deleteJob } = useJobs();
   const { candidates } = useCandidates();
   const { allActivities } = useCandidateActivities();
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,9 +75,18 @@ const Jobs = () => {
     location: '',
     requiredSkills: [] as string[],
     remarks: '',
+    expiresAt: '',
   });
   const [skillInput, setSkillInput] = useState('');
   const [groupBySkills, setGroupBySkills] = useState(false);
+
+  // Helper: a job is auto-expired if it's still Open but past its expires_at date
+  const isExpired = (job: JobDB) => {
+    if (job.status !== 'Open' || !job.expires_at) return false;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return new Date(job.expires_at) < today;
+  };
+  const effectiveStatus = (job: JobDB) => (isExpired(job) ? 'Expired' : job.status);
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -79,7 +94,8 @@ const Jobs = () => {
         job.role_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         job.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (job.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-      const matchesStatus = statusFilter === 'all' || job.status === statusFilter;
+      const eff = effectiveStatus(job);
+      const matchesStatus = statusFilter === 'all' || eff === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [jobs, searchQuery, statusFilter]);
@@ -137,9 +153,14 @@ const Jobs = () => {
       location: formData.location || formData.employerLocation || null,
       status: 'Open',
       remarks: formData.remarks || null,
+      expires_at: formData.expiresAt || null,
     });
     setIsFormOpen(false);
-    setFormData({ companyName: '', contactPerson: '', employerPhone: '', employerLocation: '', roleTitle: '', salaryMin: '', salaryMax: '', timing: 'Day', location: '', requiredSkills: [], remarks: '' });
+    setFormData({ companyName: '', contactPerson: '', employerPhone: '', employerLocation: '', roleTitle: '', salaryMin: '', salaryMax: '', timing: 'Day', location: '', requiredSkills: [], remarks: '', expiresAt: '' });
+  };
+
+  const handleSetStatus = (job: JobDB, newStatus: string) => {
+    updateJob.mutate({ id: job.id, status: newStatus });
   };
 
   const handleSmartMatch = async (job: JobDB) => {
@@ -179,14 +200,17 @@ const Jobs = () => {
     return map;
   }, [candidates]);
 
-  const renderJobCard = useCallback((job: JobDB, index: number) => (
+  const renderJobCard = useCallback((job: JobDB, index: number) => {
+    const eff = effectiveStatus(job);
+    const expired = isExpired(job);
+    return (
     <motion.div
       key={job.id}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className="bg-card rounded-xl border border-border p-5 hover:shadow-lg transition-shadow cursor-pointer"
+      className={`bg-card rounded-xl border p-5 hover:shadow-lg transition-shadow cursor-pointer ${expired ? 'border-destructive/30' : 'border-border'}`}
       onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}
     >
       <div className="flex items-start justify-between mb-3">
@@ -194,18 +218,30 @@ const Jobs = () => {
           <h3 className="font-semibold text-foreground">{job.role_title}</h3>
           <p className="text-sm text-muted-foreground">{job.company_name}</p>
         </div>
-        <StatusBadge status={job.status} variant={getStatusVariant(job.status)} />
+        <div className="flex items-center gap-1">
+          {eff === 'Filled' && <CheckCircle2 className="h-4 w-4 text-primary" />}
+          {expired && <Clock className="h-4 w-4 text-destructive" />}
+          <StatusBadge status={eff} variant={getStatusVariant(eff)} />
+        </div>
       </div>
       <div className="space-y-2 mb-4">
         <p className="text-lg font-bold text-success">
           NPR {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
         </p>
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
           <span>{job.location}</span>
           <span>•</span>
           <span>{job.timing}</span>
           <span>•</span>
           <span>{job.created_at ? format(new Date(job.created_at), 'MMM d, yyyy') : ''}</span>
+          {job.expires_at && (
+            <>
+              <span>•</span>
+              <span className={expired ? 'text-destructive font-medium' : 'text-warning'}>
+                {expired ? 'Expired' : 'Expires'} {format(new Date(job.expires_at), 'MMM d')}
+              </span>
+            </>
+          )}
         </div>
       </div>
       <SkillTagList skills={job.required_skills || []} max={3} className="mb-4" />
@@ -226,6 +262,35 @@ const Jobs = () => {
           <Sparkles className="h-4 w-4 text-primary" />
           AI Match
         </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" title="Change status">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {job.status !== 'Open' && (
+              <DropdownMenuItem onClick={() => handleSetStatus(job, 'Open')}>
+                <RefreshCw className="h-4 w-4 mr-2 text-success" /> Reopen
+              </DropdownMenuItem>
+            )}
+            {job.status !== 'Filled' && (
+              <DropdownMenuItem onClick={() => handleSetStatus(job, 'Filled')}>
+                <CheckCircle2 className="h-4 w-4 mr-2 text-primary" /> Mark Fulfilled
+              </DropdownMenuItem>
+            )}
+            {job.status !== 'Expired' && (
+              <DropdownMenuItem onClick={() => handleSetStatus(job, 'Expired')}>
+                <Clock className="h-4 w-4 mr-2 text-destructive" /> Mark Expired
+              </DropdownMenuItem>
+            )}
+            {job.status !== 'Closed' && (
+              <DropdownMenuItem onClick={() => handleSetStatus(job, 'Closed')}>
+                <XCircle className="h-4 w-4 mr-2 text-muted-foreground" /> Close
+              </DropdownMenuItem>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button variant="ghost" size="sm" onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}>
           <Eye className="h-4 w-4" />
         </Button>
@@ -234,7 +299,8 @@ const Jobs = () => {
         </Button>
       </div>
     </motion.div>
-  ), [candidates, deleteJob]);
+    );
+  }, [candidates, deleteJob, updateJob]);
 
   if (isLoading) {
     return (
@@ -260,7 +326,7 @@ const Jobs = () => {
         searchPlaceholder="Search by role, company, or location..."
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Filled', label: 'Filled' }, { value: 'Closed', label: 'Closed' }] }]}
+        filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Filled', label: 'Fulfilled' }, { value: 'Expired', label: 'Expired' }, { value: 'Closed', label: 'Closed' }] }]}
         className="mb-4"
       />
 
@@ -354,6 +420,10 @@ const Jobs = () => {
                   ))}
                 </div>
               )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Expires On (optional)</Label><Input type="date" value={formData.expiresAt} onChange={(e) => setFormData(p => ({ ...p, expiresAt: e.target.value }))} /></div>
+              <div className="space-y-2"><Label className="opacity-0 hidden md:block">spacer</Label><p className="text-xs text-muted-foreground">Vacancy is auto-flagged Expired after this date.</p></div>
             </div>
             <div className="space-y-2"><Label>Remarks</Label><Textarea placeholder="Internal notes..." value={formData.remarks} onChange={(e) => setFormData(p => ({ ...p, remarks: e.target.value }))} /></div>
             <div className="flex justify-end gap-3 pt-4 border-t border-border">

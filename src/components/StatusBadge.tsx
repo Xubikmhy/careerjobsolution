@@ -34,13 +34,13 @@ export function getStatusVariant(status: string): StatusBadgeProps['variant'] {
   if (['active', 'open', 'vacant', 'available'].includes(statusLower)) {
     return 'success';
   }
-  if (['placed', 'occupied', 'closed', 'filled'].includes(statusLower)) {
+  if (['placed', 'occupied', 'closed', 'filled', 'fulfilled'].includes(statusLower)) {
     return 'info';
   }
   if (['pending', 'in progress', 'sent for interview', 'interview'].includes(statusLower)) {
     return 'warning';
   }
-  if (['rejected', 'cancelled'].includes(statusLower)) {
+  if (['rejected', 'cancelled', 'expired', 'inactive'].includes(statusLower)) {
     return 'error';
   }
   return 'default';

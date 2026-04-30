@@ -3,6 +3,7 @@ import { StatCard } from '@/components/StatCard';
 import { PageHeader } from '@/components/PageHeader';
 import { PipelineFunnel } from '@/components/PipelineFunnel';
 import { ActionCenter } from '@/components/ActionCenter';
+import { DailyTargets } from '@/components/DailyTargets';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useCandidates } from '@/hooks/useCandidates';
 import { useJobs } from '@/hooks/useJobs';
@@ -72,6 +73,9 @@ const Dashboard = () => {
         title="Dashboard"
         description="Welcome back! Here's an overview of your agency operations."
       />
+
+      {/* Daily targets — color-coded progress vs goals */}
+      <DailyTargets />
 
       {/* Action Center — smart daily reminders */}
       <ActionCenter />

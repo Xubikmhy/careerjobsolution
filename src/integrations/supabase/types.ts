@@ -168,6 +168,7 @@ export type Database = {
           created_at: string | null
           employer_location: string | null
           employer_phone: string | null
+          expires_at: string | null
           id: string
           location: string | null
           remarks: string | null
@@ -184,6 +185,7 @@ export type Database = {
           created_at?: string | null
           employer_location?: string | null
           employer_phone?: string | null
+          expires_at?: string | null
           id?: string
           location?: string | null
           remarks?: string | null
@@ -200,6 +202,7 @@ export type Database = {
           created_at?: string | null
           employer_location?: string | null
           employer_phone?: string | null
+          expires_at?: string | null
           id?: string
           location?: string | null
           remarks?: string | null
