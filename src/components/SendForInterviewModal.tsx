@@ -6,9 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+import { JobCombobox } from '@/components/JobCombobox';
 import { CandidateDB } from '@/hooks/useCandidates';
 import { JobDB } from '@/hooks/useJobs';
 
@@ -51,19 +49,14 @@ export function SendForInterviewModal({ candidate, jobs, open, onOpenChange, onS
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Send to which Job/Company? *</Label>
-            <Select value={jobId} onValueChange={setJobId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select job vacancy" />
-              </SelectTrigger>
-              <SelectContent>
-                {openJobs.map((j) => (
-                  <SelectItem key={j.id} value={j.id}>
-                    {j.role_title} - {j.company_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Interview place — search by company, role, location *</Label>
+            <JobCombobox
+              jobs={openJobs}
+              value={jobId}
+              onChange={setJobId}
+              placeholder="Type to search interview place..."
+              statuses={['Open']}
+            />
             {selectedJob && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3" />
@@ -92,3 +85,4 @@ export function SendForInterviewModal({ candidate, jobs, open, onOpenChange, onS
     </Dialog>
   );
 }
+

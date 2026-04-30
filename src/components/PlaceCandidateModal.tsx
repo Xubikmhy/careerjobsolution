@@ -7,9 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+import { JobCombobox } from '@/components/JobCombobox';
 import { CandidateDB } from '@/hooks/useCandidates';
 import { JobDB } from '@/hooks/useJobs';
 
@@ -61,19 +59,14 @@ export function PlaceCandidateModal({ candidate, jobs, open, onOpenChange, onSub
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Placed at which Job/Company? *</Label>
-            <Select value={jobId} onValueChange={setJobId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select job" />
-              </SelectTrigger>
-              <SelectContent>
-                {openJobs.map((j) => (
-                  <SelectItem key={j.id} value={j.id}>
-                    {j.role_title} - {j.company_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Placed at — search company / role *</Label>
+            <JobCombobox
+              jobs={openJobs}
+              value={jobId}
+              onChange={setJobId}
+              placeholder="Type to search placement..."
+              statuses={['Open', 'Filled']}
+            />
             {selectedJob && (
               <div className="flex items-center gap-1 text-xs text-muted-foreground">
                 <MapPin className="h-3 w-3" />
@@ -111,3 +104,4 @@ export function PlaceCandidateModal({ candidate, jobs, open, onOpenChange, onSub
     </Dialog>
   );
 }
+
