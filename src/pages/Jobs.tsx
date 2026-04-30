@@ -25,6 +25,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useJobs, JobDB } from '@/hooks/useJobs';
 import { useCandidates, CandidateDB } from '@/hooks/useCandidates';
 import { useCandidateActivities } from '@/hooks/useCandidateActivities';
