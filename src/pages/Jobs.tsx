@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2 } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2, MoreVertical, CheckCircle2, XCircle, RefreshCw, Clock } from 'lucide-react';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
@@ -37,7 +37,7 @@ import { format } from 'date-fns';
 
 const Jobs = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const { jobs, isLoading, addJob, deleteJob } = useJobs();
+  const { jobs, isLoading, addJob, updateJob, deleteJob } = useJobs();
   const { candidates } = useCandidates();
   const { allActivities } = useCandidateActivities();
   const [searchQuery, setSearchQuery] = useState('');
@@ -69,9 +69,18 @@ const Jobs = () => {
     location: '',
     requiredSkills: [] as string[],
     remarks: '',
+    expiresAt: '',
   });
   const [skillInput, setSkillInput] = useState('');
   const [groupBySkills, setGroupBySkills] = useState(false);
+
+  // Helper: a job is auto-expired if it's still Open but past its expires_at date
+  const isExpired = (job: JobDB) => {
+    if (job.status !== 'Open' || !job.expires_at) return false;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    return new Date(job.expires_at) < today;
+  };
+  const effectiveStatus = (job: JobDB) => (isExpired(job) ? 'Expired' : job.status);
 
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
@@ -79,7 +88,8 @@ const Jobs = () => {
         job.role_title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         job.company_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (job.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
-      const matchesStatus = statusFilter === 'all' || job.status === statusFilter;
+      const eff = effectiveStatus(job);
+      const matchesStatus = statusFilter === 'all' || eff === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [jobs, searchQuery, statusFilter]);
@@ -137,9 +147,14 @@ const Jobs = () => {
       location: formData.location || formData.employerLocation || null,
       status: 'Open',
       remarks: formData.remarks || null,
+      expires_at: formData.expiresAt || null,
     });
     setIsFormOpen(false);
-    setFormData({ companyName: '', contactPerson: '', employerPhone: '', employerLocation: '', roleTitle: '', salaryMin: '', salaryMax: '', timing: 'Day', location: '', requiredSkills: [], remarks: '' });
+    setFormData({ companyName: '', contactPerson: '', employerPhone: '', employerLocation: '', roleTitle: '', salaryMin: '', salaryMax: '', timing: 'Day', location: '', requiredSkills: [], remarks: '', expiresAt: '' });
+  };
+
+  const handleSetStatus = (job: JobDB, newStatus: string) => {
+    updateJob.mutate({ id: job.id, status: newStatus });
   };
 
   const handleSmartMatch = async (job: JobDB) => {
