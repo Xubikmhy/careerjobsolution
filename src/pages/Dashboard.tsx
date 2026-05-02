@@ -10,6 +10,9 @@ import { useJobs } from '@/hooks/useJobs';
 import { useProperties } from '@/hooks/useProperties';
 import { usePlacements } from '@/hooks/usePlacements';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useRecruiterMetrics } from '@/hooks/useRecruiterMetrics';
+import { formatNPR } from '@/lib/utils';
+import { PhoneCall, BadgeCheck, DollarSign } from 'lucide-react';
 import {
   Users,
   Briefcase,
@@ -32,6 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const Dashboard = () => {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: metrics } = useRecruiterMetrics();
   const { candidates, isLoading: candidatesLoading } = useCandidates();
   const { jobs, isLoading: jobsLoading } = useJobs();
   const { properties, isLoading: propertiesLoading } = useProperties();
@@ -76,6 +80,28 @@ const Dashboard = () => {
 
       {/* Daily targets — color-coded progress vs goals */}
       <DailyTargets />
+
+      {/* Recruiter quick metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+        <StatCard
+          title="Contacted Today"
+          value={metrics?.contactedToday ?? 0}
+          icon={PhoneCall}
+          variant="primary"
+        />
+        <StatCard
+          title="Jobs Filled This Week"
+          value={metrics?.jobsFilledThisWeek ?? 0}
+          icon={BadgeCheck}
+          variant="success"
+        />
+        <StatCard
+          title="Commission This Month"
+          value={formatNPR(metrics?.commissionEarnedThisMonth ?? 0)}
+          icon={DollarSign}
+          variant="warning"
+        />
+      </div>
 
       {/* Action Center — smart daily reminders */}
       <ActionCenter />

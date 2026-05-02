@@ -1,6 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw, X } from 'lucide-react';
+import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw, X, Copy, Check, Share2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { formatNPR } from '@/lib/utils';
+import { CandidateQuickView } from '@/components/CandidateQuickView';
+import { WhatsAppTemplatesMenu } from '@/components/WhatsAppTemplatesMenu';
+import { useAgencySettings } from '@/hooks/useAgencySettings';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
@@ -61,9 +66,12 @@ function groupBySkill(candidates: CandidateDB[]) {
 function CandidateTable({
   candidates,
   selected,
+  lastContactMap,
+  contactedTodaySet,
   onToggleOne,
   onToggleAll,
   onView,
+  onQuickView,
   onGenerateCV,
   onDelete,
   onSendInterview,
@@ -72,12 +80,18 @@ function CandidateTable({
   onViewTimeline,
   onToggleInactive,
   onInlineStatusChange,
+  onCopyPhone,
+  onToggleContacted,
+  copiedId,
 }: {
   candidates: CandidateDB[];
   selected: Set<string>;
+  lastContactMap: Record<string, Date | undefined>;
+  contactedTodaySet: Set<string>;
   onToggleOne: (id: string) => void;
   onToggleAll: (ids: string[], allSelected: boolean) => void;
   onView: (c: CandidateDB) => void;
+  onQuickView: (c: CandidateDB) => void;
   onGenerateCV: (c: CandidateDB) => void;
   onDelete: (id: string) => void;
   onSendInterview: (c: CandidateDB) => void;
@@ -86,6 +100,9 @@ function CandidateTable({
   onViewTimeline: (c: CandidateDB) => void;
   onToggleInactive: (c: CandidateDB) => void;
   onInlineStatusChange: (c: CandidateDB, newStatus: string) => void;
+  onCopyPhone: (c: CandidateDB) => void;
+  onToggleContacted: (c: CandidateDB) => void;
+  copiedId: string | null;
 }) {
   if (candidates.length === 0) {
     return <p className="text-center py-8 text-muted-foreground">No candidates found</p>;
@@ -108,17 +125,22 @@ function CandidateTable({
               />
             </TableHead>
             <TableHead>Name</TableHead>
-            <TableHead className="hidden md:table-cell">Address</TableHead>
+            <TableHead className="hidden md:table-cell">Phone</TableHead>
             <TableHead className="hidden lg:table-cell">Skills</TableHead>
             <TableHead className="hidden sm:table-cell">Exp</TableHead>
             <TableHead>Salary</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="hidden md:table-cell">Registered</TableHead>
+            <TableHead className="hidden md:table-cell">Contacted</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {candidates.map((candidate) => (
+          {candidates.map((candidate) => {
+            const lastContact = lastContactMap[candidate.id];
+            const tooltipText = lastContact
+              ? `Last contact: ${formatDistanceToNow(lastContact, { addSuffix: true })}`
+              : 'No contact logged yet';
+            return (
             <TableRow key={candidate.id} className="hover:bg-muted/50" data-state={selected.has(candidate.id) ? 'selected' : undefined}>
               <TableCell>
                 <Checkbox
@@ -129,18 +151,36 @@ function CandidateTable({
               </TableCell>
               <TableCell>
                 <div>
-                  <p className="font-medium text-foreground">{candidate.full_name}</p>
-                  <p className="text-sm text-muted-foreground md:hidden">{candidate.address}</p>
+                  <button
+                    type="button"
+                    onClick={() => onQuickView(candidate)}
+                    className="font-medium text-foreground text-left hover:text-primary hover:underline transition-colors"
+                  >
+                    {candidate.full_name}
+                  </button>
+                  <p className="text-xs text-muted-foreground md:hidden truncate">{candidate.phone}</p>
                 </div>
               </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground">{candidate.address}</TableCell>
+              <TableCell className="hidden md:table-cell">
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-muted-foreground">{candidate.phone}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={(e) => { e.stopPropagation(); onCopyPhone(candidate); }}
+                    title="Copy phone"
+                  >
+                    {copiedId === candidate.id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                </div>
+              </TableCell>
               <TableCell className="hidden lg:table-cell">
                 <SkillTagList skills={candidate.skills || []} max={3} />
               </TableCell>
               <TableCell className="hidden sm:table-cell text-muted-foreground">{candidate.experience_years} yrs</TableCell>
-              <TableCell className="font-medium">NPR {candidate.expected_salary?.toLocaleString()}</TableCell>
+              <TableCell className="font-medium">{formatNPR(candidate.expected_salary)}</TableCell>
               <TableCell>
-                {/* Inline status edit — click badge to change */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -148,7 +188,11 @@ function CandidateTable({
                       className="rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-opacity hover:opacity-80"
                       title="Click to change status"
                     >
-                      <StatusBadge status={candidate.status} variant={getStatusVariant(candidate.status)} />
+                      <StatusBadge
+                        status={candidate.status}
+                        variant={getStatusVariant(candidate.status)}
+                        tooltip={tooltipText}
+                      />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
@@ -164,11 +208,25 @@ function CandidateTable({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                {candidate.created_at ? format(new Date(candidate.created_at), 'MMM d, yyyy') : '-'}
+              <TableCell className="hidden md:table-cell">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-muted-foreground">
+                  <Checkbox
+                    checked={contactedTodaySet.has(candidate.id)}
+                    onCheckedChange={() => onToggleContacted(candidate)}
+                    aria-label="Mark as contacted today"
+                  />
+                  <span>
+                    {contactedTodaySet.has(candidate.id)
+                      ? 'Today'
+                      : lastContact
+                        ? formatDistanceToNow(lastContact, { addSuffix: true })
+                        : '—'}
+                  </span>
+                </label>
               </TableCell>
               <TableCell>
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end gap-0.5">
+                  <WhatsAppTemplatesMenu phone={candidate.phone} name={candidate.full_name} />
                   {candidate.status === 'Active' && (
                     <>
                       <Button variant="ghost" size="icon" onClick={() => onSendInterview(candidate)} title="Send for Interview" className="text-warning hover:text-warning">
@@ -212,7 +270,8 @@ function CandidateTable({
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </div>
@@ -226,14 +285,79 @@ const Candidates = () => {
   const { jobs, updateJob } = useJobs();
   const { addPlacement, placements } = usePlacements();
   const { allActivities, addActivity } = useCandidateActivities();
+  const { settings } = useAgencySettings();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusTab, setStatusTab] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateDB | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [quickViewCandidate, setQuickViewCandidate] = useState<CandidateDB | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [groupBySkills, setGroupBySkills] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Last-contact + contacted-today maps from activities
+  const { lastContactMap, contactedTodaySet } = useMemo(() => {
+    const last: Record<string, Date> = {};
+    const today = new Set<string>();
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    allActivities.forEach((a) => {
+      if (!a.candidate_id) return;
+      const at = new Date(a.created_at);
+      const isContact = a.activity_type === 'contact' || a.activity_type === 'remark' || a.activity_type === 'sent_for_interview' || a.activity_type === 'placed';
+      if (!isContact) return;
+      if (!last[a.candidate_id] || at > last[a.candidate_id]) last[a.candidate_id] = at;
+      if (a.activity_type === 'contact' && at >= startOfDay) today.add(a.candidate_id);
+    });
+    return { lastContactMap: last, contactedTodaySet: today };
+  }, [allActivities]);
+
+  const handleCopyPhone = async (c: CandidateDB) => {
+    try {
+      await navigator.clipboard.writeText(c.phone);
+      setCopiedId(c.id);
+      toast({ title: 'Copied', description: c.phone });
+      setTimeout(() => setCopiedId(null), 1200);
+    } catch {
+      toast({ title: 'Copy failed', description: 'Clipboard not available', variant: 'destructive' });
+    }
+  };
+
+  const handleToggleContacted = (c: CandidateDB) => {
+    if (contactedTodaySet.has(c.id)) {
+      toast({ title: 'Already logged', description: `${c.full_name} marked contacted today.` });
+      return;
+    }
+    addActivity.mutate({
+      candidate_id: c.id,
+      job_id: null,
+      activity_type: 'contact',
+      status: c.status,
+      placed_at: null,
+      remarks: 'Marked as contacted',
+      follow_up_date: null,
+      follow_up_done: false,
+    });
+  };
+
+  const handleShareSelectedToWhatsApp = () => {
+    const list = candidates.filter((c) => selected.has(c.id));
+    if (list.length === 0) return;
+    const capped = list.slice(0, 30);
+    if (list.length > 30) {
+      toast({ title: 'Sharing first 30', description: `Selected ${list.length}, WhatsApp text limit applied.` });
+    }
+    const agency = settings?.agency_name || 'Career Job Solution';
+    const dateStr = format(new Date(), 'MMM d, yyyy');
+    const lines = capped.map((c, i) => {
+      const skill = c.skills?.[0] || '—';
+      return `${i + 1}. ${c.full_name} — ${skill} — ${c.experience_years}y — ${formatNPR(c.expected_salary)} — ${c.phone}`;
+    });
+    const text = `*Available Candidates — ${dateStr}*\n${lines.join('\n')}\n\n— ${agency}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  };
 
   const toggleOne = (id: string) => {
     setSelected((prev) => {
@@ -548,9 +672,13 @@ const Candidates = () => {
 
   const tableProps = {
     selected,
+    lastContactMap,
+    contactedTodaySet,
+    copiedId,
     onToggleOne: toggleOne,
     onToggleAll: toggleAll,
     onView: (c: CandidateDB) => { setSelectedCandidate(c); setIsViewOpen(true); },
+    onQuickView: (c: CandidateDB) => { setQuickViewCandidate(c); setIsQuickViewOpen(true); },
     onGenerateCV: handleGenerateCV,
     onDelete: (id: string) => deleteCandidate.mutate(id),
     onSendInterview: handleSendInterview,
@@ -559,6 +687,8 @@ const Candidates = () => {
     onViewTimeline: (c: CandidateDB) => { setTimelineCandidate(c); setIsTimelineOpen(true); },
     onToggleInactive: handleToggleInactive,
     onInlineStatusChange: handleInlineStatusChange,
+    onCopyPhone: handleCopyPhone,
+    onToggleContacted: handleToggleContacted,
   };
 
   if (isLoading) {
@@ -645,6 +775,9 @@ const Candidates = () => {
               exportToCSV(rows, 'candidates_selected');
             }}>
               <Download className="h-4 w-4" /> Export
+            </Button>
+            <Button size="sm" variant="outline" className="gap-1 text-success border-success/30 hover:bg-success/10" onClick={handleShareSelectedToWhatsApp}>
+              <Share2 className="h-4 w-4" /> Share to WhatsApp
             </Button>
             <Button size="sm" variant="destructive" className="gap-1" onClick={handleBulkDelete}>
               <Trash2 className="h-4 w-4" /> Delete
@@ -796,6 +929,12 @@ const Candidates = () => {
             follow_up_done: false,
           });
         }}
+      />
+      <CandidateQuickView
+        candidate={quickViewCandidate}
+        open={isQuickViewOpen}
+        onOpenChange={(o) => { setIsQuickViewOpen(o); if (!o) setQuickViewCandidate(null); }}
+        onOpenFullProfile={(c) => { setSelectedCandidate(c); setIsViewOpen(true); }}
       />
     </DashboardLayout>
   );

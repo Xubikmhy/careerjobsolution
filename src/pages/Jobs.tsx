@@ -1,6 +1,8 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2, MoreVertical, CheckCircle2, XCircle, RefreshCw, Clock } from 'lucide-react';
+import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2, MoreVertical, CheckCircle2, XCircle, RefreshCw, Clock, Copy } from 'lucide-react';
+import { JobFilters, JobFilterState, buildDefaultFilters } from '@/components/JobFilters';
+import { formatNPR } from '@/lib/utils';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
@@ -80,6 +82,21 @@ const Jobs = () => {
   const [skillInput, setSkillInput] = useState('');
   const [groupBySkills, setGroupBySkills] = useState(false);
 
+  const [filters, setFilters] = useState<JobFilterState>({ location: 'all', shifts: [], salary: [0, 100000] });
+
+  // Initialize/grow salary slider once jobs load
+  useEffect(() => {
+    if (jobs.length === 0) return;
+    setFilters((prev) => {
+      const max = Math.max(100000, ...jobs.map((j) => Number(j.salary_max) || 0));
+      const ceil = Math.ceil(max / 5000) * 5000;
+      // Only widen the upper bound if user hasn't moved the slider down
+      if (prev.salary[1] < 100001 || prev.salary[1] === ceil) return { ...prev, salary: [prev.salary[0], ceil] };
+      return prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs.length]);
+
   // Helper: a job is auto-expired if it's still Open but past its expires_at date
   const isExpired = (job: JobDB) => {
     if (job.status !== 'Open' || !job.expires_at) return false;
@@ -96,9 +113,14 @@ const Jobs = () => {
         (job.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
       const eff = effectiveStatus(job);
       const matchesStatus = statusFilter === 'all' || eff === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesLocation = filters.location === 'all' || job.location === filters.location;
+      const matchesShift = filters.shifts.length === 0 || filters.shifts.includes(job.timing);
+      const sMin = Number(job.salary_min) || 0;
+      const sMax = Number(job.salary_max) || sMin;
+      const matchesSalary = sMax >= filters.salary[0] && sMin <= filters.salary[1];
+      return matchesSearch && matchesStatus && matchesLocation && matchesShift && matchesSalary;
     });
-  }, [jobs, searchQuery, statusFilter]);
+  }, [jobs, searchQuery, statusFilter, filters]);
 
   const jobSkillGroups = useMemo(() => {
     const groups: Record<string, typeof filteredJobs> = {};
@@ -161,6 +183,25 @@ const Jobs = () => {
 
   const handleSetStatus = (job: JobDB, newStatus: string) => {
     updateJob.mutate({ id: job.id, status: newStatus });
+  };
+
+  const handleDuplicateJob = (job: JobDB) => {
+    setFormData({
+      companyName: job.company_name,
+      contactPerson: job.contact_person || '',
+      employerPhone: job.employer_phone || '',
+      employerLocation: job.employer_location || '',
+      roleTitle: `${job.role_title} (Copy)`,
+      salaryMin: String(job.salary_min ?? ''),
+      salaryMax: String(job.salary_max ?? ''),
+      timing: job.timing || 'Day',
+      location: job.location || '',
+      requiredSkills: [...(job.required_skills || [])],
+      remarks: job.remarks || '',
+      expiresAt: '',
+    });
+    setIsFormOpen(true);
+    sonnerToast.success('Job duplicated — review and post');
   };
 
   const handleSmartMatch = async (job: JobDB) => {
@@ -226,7 +267,7 @@ const Jobs = () => {
       </div>
       <div className="space-y-2 mb-4">
         <p className="text-lg font-bold text-success">
-          NPR {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
+          {formatNPR(job.salary_min)} - {formatNPR(job.salary_max)}
         </p>
         <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
           <span>{job.location}</span>
@@ -269,6 +310,9 @@ const Jobs = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleDuplicateJob(job)}>
+              <Copy className="h-4 w-4 mr-2 text-primary" /> Duplicate Job
+            </DropdownMenuItem>
             {job.status !== 'Open' && (
               <DropdownMenuItem onClick={() => handleSetStatus(job, 'Open')}>
                 <RefreshCw className="h-4 w-4 mr-2 text-success" /> Reopen
@@ -329,6 +373,8 @@ const Jobs = () => {
         filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Filled', label: 'Fulfilled' }, { value: 'Expired', label: 'Expired' }, { value: 'Closed', label: 'Closed' }] }]}
         className="mb-4"
       />
+
+      <JobFilters jobs={jobs} filters={filters} onChange={setFilters} />
 
       <div className="flex justify-end mb-4">
         <Button variant={groupBySkills ? 'default' : 'outline'} size="sm" onClick={() => setGroupBySkills(!groupBySkills)}>
@@ -450,7 +496,7 @@ const Jobs = () => {
                 <h4 className="font-medium text-foreground">{selectedJob.role_title}</h4>
                 <p className="text-sm text-muted-foreground">{selectedJob.company_name}</p>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-sm text-success font-medium">NPR {selectedJob.salary_min.toLocaleString()} - {selectedJob.salary_max.toLocaleString()}</span>
+                  <span className="text-sm text-success font-medium">{formatNPR(selectedJob.salary_min)} - {formatNPR(selectedJob.salary_max)}</span>
                 </div>
               </div>
 
