@@ -1,6 +1,11 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw, X } from 'lucide-react';
+import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw, X, Copy, Check, Share2 } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { formatNPR } from '@/lib/utils';
+import { CandidateQuickView } from '@/components/CandidateQuickView';
+import { WhatsAppTemplatesMenu } from '@/components/WhatsAppTemplatesMenu';
+import { useAgencySettings } from '@/hooks/useAgencySettings';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
