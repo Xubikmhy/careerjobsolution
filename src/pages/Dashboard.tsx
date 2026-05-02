@@ -10,6 +10,9 @@ import { useJobs } from '@/hooks/useJobs';
 import { useProperties } from '@/hooks/useProperties';
 import { usePlacements } from '@/hooks/usePlacements';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useRecruiterMetrics } from '@/hooks/useRecruiterMetrics';
+import { formatNPR } from '@/lib/utils';
+import { PhoneCall, BadgeCheck, DollarSign } from 'lucide-react';
 import {
   Users,
   Briefcase,
