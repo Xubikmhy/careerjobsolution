@@ -66,9 +66,12 @@ function groupBySkill(candidates: CandidateDB[]) {
 function CandidateTable({
   candidates,
   selected,
+  lastContactMap,
+  contactedTodaySet,
   onToggleOne,
   onToggleAll,
   onView,
+  onQuickView,
   onGenerateCV,
   onDelete,
   onSendInterview,
@@ -77,12 +80,18 @@ function CandidateTable({
   onViewTimeline,
   onToggleInactive,
   onInlineStatusChange,
+  onCopyPhone,
+  onToggleContacted,
+  copiedId,
 }: {
   candidates: CandidateDB[];
   selected: Set<string>;
+  lastContactMap: Record<string, Date | undefined>;
+  contactedTodaySet: Set<string>;
   onToggleOne: (id: string) => void;
   onToggleAll: (ids: string[], allSelected: boolean) => void;
   onView: (c: CandidateDB) => void;
+  onQuickView: (c: CandidateDB) => void;
   onGenerateCV: (c: CandidateDB) => void;
   onDelete: (id: string) => void;
   onSendInterview: (c: CandidateDB) => void;
@@ -91,6 +100,9 @@ function CandidateTable({
   onViewTimeline: (c: CandidateDB) => void;
   onToggleInactive: (c: CandidateDB) => void;
   onInlineStatusChange: (c: CandidateDB, newStatus: string) => void;
+  onCopyPhone: (c: CandidateDB) => void;
+  onToggleContacted: (c: CandidateDB) => void;
+  copiedId: string | null;
 }) {
   if (candidates.length === 0) {
     return <p className="text-center py-8 text-muted-foreground">No candidates found</p>;
@@ -113,17 +125,22 @@ function CandidateTable({
               />
             </TableHead>
             <TableHead>Name</TableHead>
-            <TableHead className="hidden md:table-cell">Address</TableHead>
+            <TableHead className="hidden md:table-cell">Phone</TableHead>
             <TableHead className="hidden lg:table-cell">Skills</TableHead>
             <TableHead className="hidden sm:table-cell">Exp</TableHead>
             <TableHead>Salary</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead className="hidden md:table-cell">Registered</TableHead>
+            <TableHead className="hidden md:table-cell">Contacted</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {candidates.map((candidate) => (
+          {candidates.map((candidate) => {
+            const lastContact = lastContactMap[candidate.id];
+            const tooltipText = lastContact
+              ? `Last contact: ${formatDistanceToNow(lastContact, { addSuffix: true })}`
+              : 'No contact logged yet';
+            return (
             <TableRow key={candidate.id} className="hover:bg-muted/50" data-state={selected.has(candidate.id) ? 'selected' : undefined}>
               <TableCell>
                 <Checkbox
@@ -134,18 +151,36 @@ function CandidateTable({
               </TableCell>
               <TableCell>
                 <div>
-                  <p className="font-medium text-foreground">{candidate.full_name}</p>
-                  <p className="text-sm text-muted-foreground md:hidden">{candidate.address}</p>
+                  <button
+                    type="button"
+                    onClick={() => onQuickView(candidate)}
+                    className="font-medium text-foreground text-left hover:text-primary hover:underline transition-colors"
+                  >
+                    {candidate.full_name}
+                  </button>
+                  <p className="text-xs text-muted-foreground md:hidden truncate">{candidate.phone}</p>
                 </div>
               </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground">{candidate.address}</TableCell>
+              <TableCell className="hidden md:table-cell">
+                <div className="flex items-center gap-1">
+                  <span className="text-sm text-muted-foreground">{candidate.phone}</span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={(e) => { e.stopPropagation(); onCopyPhone(candidate); }}
+                    title="Copy phone"
+                  >
+                    {copiedId === candidate.id ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+                  </Button>
+                </div>
+              </TableCell>
               <TableCell className="hidden lg:table-cell">
                 <SkillTagList skills={candidate.skills || []} max={3} />
               </TableCell>
               <TableCell className="hidden sm:table-cell text-muted-foreground">{candidate.experience_years} yrs</TableCell>
-              <TableCell className="font-medium">NPR {candidate.expected_salary?.toLocaleString()}</TableCell>
+              <TableCell className="font-medium">{formatNPR(candidate.expected_salary)}</TableCell>
               <TableCell>
-                {/* Inline status edit — click badge to change */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button
@@ -153,7 +188,11 @@ function CandidateTable({
                       className="rounded-md ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring transition-opacity hover:opacity-80"
                       title="Click to change status"
                     >
-                      <StatusBadge status={candidate.status} variant={getStatusVariant(candidate.status)} />
+                      <StatusBadge
+                        status={candidate.status}
+                        variant={getStatusVariant(candidate.status)}
+                        tooltip={tooltipText}
+                      />
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
@@ -169,11 +208,25 @@ function CandidateTable({
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>
-              <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
-                {candidate.created_at ? format(new Date(candidate.created_at), 'MMM d, yyyy') : '-'}
+              <TableCell className="hidden md:table-cell">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-muted-foreground">
+                  <Checkbox
+                    checked={contactedTodaySet.has(candidate.id)}
+                    onCheckedChange={() => onToggleContacted(candidate)}
+                    aria-label="Mark as contacted today"
+                  />
+                  <span>
+                    {contactedTodaySet.has(candidate.id)
+                      ? 'Today'
+                      : lastContact
+                        ? formatDistanceToNow(lastContact, { addSuffix: true })
+                        : '—'}
+                  </span>
+                </label>
               </TableCell>
               <TableCell>
-                <div className="flex items-center justify-end gap-1">
+                <div className="flex items-center justify-end gap-0.5">
+                  <WhatsAppTemplatesMenu phone={candidate.phone} name={candidate.full_name} />
                   {candidate.status === 'Active' && (
                     <>
                       <Button variant="ghost" size="icon" onClick={() => onSendInterview(candidate)} title="Send for Interview" className="text-warning hover:text-warning">
@@ -217,7 +270,8 @@ function CandidateTable({
                 </div>
               </TableCell>
             </TableRow>
-          ))}
+            );
+          })}
         </TableBody>
       </Table>
     </div>
