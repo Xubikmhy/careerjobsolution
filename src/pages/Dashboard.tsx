@@ -35,6 +35,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 const Dashboard = () => {
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: metrics } = useRecruiterMetrics();
   const { candidates, isLoading: candidatesLoading } = useCandidates();
   const { jobs, isLoading: jobsLoading } = useJobs();
   const { properties, isLoading: propertiesLoading } = useProperties();
