@@ -776,6 +776,9 @@ const Candidates = () => {
             }}>
               <Download className="h-4 w-4" /> Export
             </Button>
+            <Button size="sm" variant="outline" className="gap-1 text-success border-success/30 hover:bg-success/10" onClick={handleShareSelectedToWhatsApp}>
+              <Share2 className="h-4 w-4" /> Share to WhatsApp
+            </Button>
             <Button size="sm" variant="destructive" className="gap-1" onClick={handleBulkDelete}>
               <Trash2 className="h-4 w-4" /> Delete
             </Button>
