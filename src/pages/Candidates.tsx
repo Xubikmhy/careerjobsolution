@@ -672,9 +672,13 @@ const Candidates = () => {
 
   const tableProps = {
     selected,
+    lastContactMap,
+    contactedTodaySet,
+    copiedId,
     onToggleOne: toggleOne,
     onToggleAll: toggleAll,
     onView: (c: CandidateDB) => { setSelectedCandidate(c); setIsViewOpen(true); },
+    onQuickView: (c: CandidateDB) => { setQuickViewCandidate(c); setIsQuickViewOpen(true); },
     onGenerateCV: handleGenerateCV,
     onDelete: (id: string) => deleteCandidate.mutate(id),
     onSendInterview: handleSendInterview,
@@ -683,6 +687,8 @@ const Candidates = () => {
     onViewTimeline: (c: CandidateDB) => { setTimelineCandidate(c); setIsTimelineOpen(true); },
     onToggleInactive: handleToggleInactive,
     onInlineStatusChange: handleInlineStatusChange,
+    onCopyPhone: handleCopyPhone,
+    onToggleContacted: handleToggleContacted,
   };
 
   if (isLoading) {
