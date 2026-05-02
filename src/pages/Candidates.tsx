@@ -285,14 +285,79 @@ const Candidates = () => {
   const { jobs, updateJob } = useJobs();
   const { addPlacement, placements } = usePlacements();
   const { allActivities, addActivity } = useCandidateActivities();
+  const { settings } = useAgencySettings();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusTab, setStatusTab] = useState('all');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedCandidate, setSelectedCandidate] = useState<CandidateDB | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+  const [quickViewCandidate, setQuickViewCandidate] = useState<CandidateDB | null>(null);
+  const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
   const [groupBySkills, setGroupBySkills] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  // Last-contact + contacted-today maps from activities
+  const { lastContactMap, contactedTodaySet } = useMemo(() => {
+    const last: Record<string, Date> = {};
+    const today = new Set<string>();
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    allActivities.forEach((a) => {
+      if (!a.candidate_id) return;
+      const at = new Date(a.created_at);
+      const isContact = a.activity_type === 'contact' || a.activity_type === 'remark' || a.activity_type === 'sent_for_interview' || a.activity_type === 'placed';
+      if (!isContact) return;
+      if (!last[a.candidate_id] || at > last[a.candidate_id]) last[a.candidate_id] = at;
+      if (a.activity_type === 'contact' && at >= startOfDay) today.add(a.candidate_id);
+    });
+    return { lastContactMap: last, contactedTodaySet: today };
+  }, [allActivities]);
+
+  const handleCopyPhone = async (c: CandidateDB) => {
+    try {
+      await navigator.clipboard.writeText(c.phone);
+      setCopiedId(c.id);
+      toast({ title: 'Copied', description: c.phone });
+      setTimeout(() => setCopiedId(null), 1200);
+    } catch {
+      toast({ title: 'Copy failed', description: 'Clipboard not available', variant: 'destructive' });
+    }
+  };
+
+  const handleToggleContacted = (c: CandidateDB) => {
+    if (contactedTodaySet.has(c.id)) {
+      toast({ title: 'Already logged', description: `${c.full_name} marked contacted today.` });
+      return;
+    }
+    addActivity.mutate({
+      candidate_id: c.id,
+      job_id: null,
+      activity_type: 'contact',
+      status: c.status,
+      placed_at: null,
+      remarks: 'Marked as contacted',
+      follow_up_date: null,
+      follow_up_done: false,
+    });
+  };
+
+  const handleShareSelectedToWhatsApp = () => {
+    const list = candidates.filter((c) => selected.has(c.id));
+    if (list.length === 0) return;
+    const capped = list.slice(0, 30);
+    if (list.length > 30) {
+      toast({ title: 'Sharing first 30', description: `Selected ${list.length}, WhatsApp text limit applied.` });
+    }
+    const agency = settings?.agency_name || 'Career Job Solution';
+    const dateStr = format(new Date(), 'MMM d, yyyy');
+    const lines = capped.map((c, i) => {
+      const skill = c.skills?.[0] || '—';
+      return `${i + 1}. ${c.full_name} — ${skill} — ${c.experience_years}y — ${formatNPR(c.expected_salary)} — ${c.phone}`;
+    });
+    const text = `*Available Candidates — ${dateStr}*\n${lines.join('\n')}\n\n— ${agency}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener');
+  };
 
   const toggleOne = (id: string) => {
     setSelected((prev) => {
