@@ -120,7 +120,7 @@ const Jobs = () => {
       const matchesSalary = sMax >= filters.salary[0] && sMin <= filters.salary[1];
       return matchesSearch && matchesStatus && matchesLocation && matchesShift && matchesSalary;
     });
-  }, [jobs, searchQuery, statusFilter]);
+  }, [jobs, searchQuery, statusFilter, filters]);
 
   const jobSkillGroups = useMemo(() => {
     const groups: Record<string, typeof filteredJobs> = {};
