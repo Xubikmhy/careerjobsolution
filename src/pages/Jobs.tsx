@@ -82,6 +82,21 @@ const Jobs = () => {
   const [skillInput, setSkillInput] = useState('');
   const [groupBySkills, setGroupBySkills] = useState(false);
 
+  const [filters, setFilters] = useState<JobFilterState>({ location: 'all', shifts: [], salary: [0, 100000] });
+
+  // Initialize/grow salary slider once jobs load
+  useEffect(() => {
+    if (jobs.length === 0) return;
+    setFilters((prev) => {
+      const max = Math.max(100000, ...jobs.map((j) => Number(j.salary_max) || 0));
+      const ceil = Math.ceil(max / 5000) * 5000;
+      // Only widen the upper bound if user hasn't moved the slider down
+      if (prev.salary[1] < 100001 || prev.salary[1] === ceil) return { ...prev, salary: [prev.salary[0], ceil] };
+      return prev;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs.length]);
+
   // Helper: a job is auto-expired if it's still Open but past its expires_at date
   const isExpired = (job: JobDB) => {
     if (job.status !== 'Open' || !job.expires_at) return false;
@@ -98,7 +113,12 @@ const Jobs = () => {
         (job.location?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
       const eff = effectiveStatus(job);
       const matchesStatus = statusFilter === 'all' || eff === statusFilter;
-      return matchesSearch && matchesStatus;
+      const matchesLocation = filters.location === 'all' || job.location === filters.location;
+      const matchesShift = filters.shifts.length === 0 || filters.shifts.includes(job.timing);
+      const sMin = Number(job.salary_min) || 0;
+      const sMax = Number(job.salary_max) || sMin;
+      const matchesSalary = sMax >= filters.salary[0] && sMin <= filters.salary[1];
+      return matchesSearch && matchesStatus && matchesLocation && matchesShift && matchesSalary;
     });
   }, [jobs, searchQuery, statusFilter]);
 
