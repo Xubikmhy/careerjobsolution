@@ -267,7 +267,7 @@ const Jobs = () => {
       </div>
       <div className="space-y-2 mb-4">
         <p className="text-lg font-bold text-success">
-          NPR {job.salary_min.toLocaleString()} - {job.salary_max.toLocaleString()}
+          {formatNPR(job.salary_min)} - {formatNPR(job.salary_max)}
         </p>
         <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
           <span>{job.location}</span>
