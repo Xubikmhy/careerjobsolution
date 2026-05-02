@@ -374,6 +374,8 @@ const Jobs = () => {
         className="mb-4"
       />
 
+      <JobFilters jobs={jobs} filters={filters} onChange={setFilters} />
+
       <div className="flex justify-end mb-4">
         <Button variant={groupBySkills ? 'default' : 'outline'} size="sm" onClick={() => setGroupBySkills(!groupBySkills)}>
           Group by Skill
