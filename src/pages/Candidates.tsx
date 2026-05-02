@@ -930,6 +930,12 @@ const Candidates = () => {
           });
         }}
       />
+      <CandidateQuickView
+        candidate={quickViewCandidate}
+        open={isQuickViewOpen}
+        onOpenChange={(o) => { setIsQuickViewOpen(o); if (!o) setQuickViewCandidate(null); }}
+        onOpenFullProfile={(c) => { setSelectedCandidate(c); setIsViewOpen(true); }}
+      />
     </DashboardLayout>
   );
 };
