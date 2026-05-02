@@ -185,6 +185,25 @@ const Jobs = () => {
     updateJob.mutate({ id: job.id, status: newStatus });
   };
 
+  const handleDuplicateJob = (job: JobDB) => {
+    setFormData({
+      companyName: job.company_name,
+      contactPerson: job.contact_person || '',
+      employerPhone: job.employer_phone || '',
+      employerLocation: job.employer_location || '',
+      roleTitle: `${job.role_title} (Copy)`,
+      salaryMin: String(job.salary_min ?? ''),
+      salaryMax: String(job.salary_max ?? ''),
+      timing: job.timing || 'Day',
+      location: job.location || '',
+      requiredSkills: [...(job.required_skills || [])],
+      remarks: job.remarks || '',
+      expiresAt: '',
+    });
+    setIsFormOpen(true);
+    sonnerToast.success('Job duplicated — review and post');
+  };
+
   const handleSmartMatch = async (job: JobDB) => {
     const activeCandidates = candidates.filter(c => c.status === 'Active');
     if (activeCandidates.length === 0) {
