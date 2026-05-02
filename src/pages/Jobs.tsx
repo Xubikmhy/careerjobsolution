@@ -310,6 +310,9 @@ const Jobs = () => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleDuplicateJob(job)}>
+              <Copy className="h-4 w-4 mr-2 text-primary" /> Duplicate Job
+            </DropdownMenuItem>
             {job.status !== 'Open' && (
               <DropdownMenuItem onClick={() => handleSetStatus(job, 'Open')}>
                 <RefreshCw className="h-4 w-4 mr-2 text-success" /> Reopen
