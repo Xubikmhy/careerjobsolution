@@ -1,35 +1,42 @@
 import { Phone, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { normalizePhone } from '@/lib/utils';
 
 interface WhatsAppButtonProps {
   phone: string;
   name?: string;
+  /** Override the default WhatsApp message body */
+  message?: string;
   size?: 'sm' | 'icon';
 }
 
-function cleanPhone(phone: string) {
-  let cleaned = phone.replace(/[^0-9+]/g, '');
-  // Nepal numbers: add country code if missing
-  if (cleaned.startsWith('98') || cleaned.startsWith('97')) {
-    cleaned = '977' + cleaned;
-  }
-  if (cleaned.startsWith('+')) cleaned = cleaned.slice(1);
-  return cleaned;
-}
-
-export function WhatsAppButton({ phone, name, size = 'icon' }: WhatsAppButtonProps) {
-  const cleaned = cleanPhone(phone);
-  const waUrl = `https://wa.me/${cleaned}${name ? `?text=Hello ${encodeURIComponent(name)}` : ''}`;
+export function WhatsAppButton({ phone, name, message, size = 'icon' }: WhatsAppButtonProps) {
+  const cleaned = normalizePhone(phone);
+  const defaultMsg = name ? `Hi ${name}, regarding your profile...` : '';
+  const text = message ?? defaultMsg;
+  const waUrl = `https://wa.me/${cleaned}${text ? `?text=${encodeURIComponent(text)}` : ''}`;
   const callUrl = `tel:${phone}`;
 
   return (
     <span className="inline-flex gap-0.5">
-      <Button variant="ghost" size="icon" className="h-7 w-7 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950" asChild title="WhatsApp">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 text-success hover:text-success hover:bg-success/10"
+        asChild
+        title="WhatsApp"
+      >
         <a href={waUrl} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}>
           <MessageCircle className="h-3.5 w-3.5" />
         </a>
       </Button>
-      <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/10" asChild title="Call">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-7 w-7 text-primary hover:bg-primary/10"
+        asChild
+        title="Call"
+      >
         <a href={callUrl} onClick={e => e.stopPropagation()}>
           <Phone className="h-3.5 w-3.5" />
         </a>
