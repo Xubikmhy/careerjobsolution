@@ -496,7 +496,7 @@ const Jobs = () => {
                 <h4 className="font-medium text-foreground">{selectedJob.role_title}</h4>
                 <p className="text-sm text-muted-foreground">{selectedJob.company_name}</p>
                 <div className="flex items-center gap-2 mt-2">
-                  <span className="text-sm text-success font-medium">NPR {selectedJob.salary_min.toLocaleString()} - {selectedJob.salary_max.toLocaleString()}</span>
+                  <span className="text-sm text-success font-medium">{formatNPR(selectedJob.salary_min)} - {formatNPR(selectedJob.salary_max)}</span>
                 </div>
               </div>
 
