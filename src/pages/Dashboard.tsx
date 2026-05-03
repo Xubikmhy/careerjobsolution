@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { PipelineFunnel } from '@/components/PipelineFunnel';
 import { ActionCenter } from '@/components/ActionCenter';
 import { DailyTargets } from '@/components/DailyTargets';
+import { DailyReportButton } from '@/components/DailyReportButton';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useCandidates } from '@/hooks/useCandidates';
 import { useJobs } from '@/hooks/useJobs';
