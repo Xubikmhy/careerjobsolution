@@ -4,6 +4,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { PipelineFunnel } from '@/components/PipelineFunnel';
 import { ActionCenter } from '@/components/ActionCenter';
 import { DailyTargets } from '@/components/DailyTargets';
+import { DailyReportButton } from '@/components/DailyReportButton';
 import { useDashboardStats } from '@/hooks/useDashboardStats';
 import { useCandidates } from '@/hooks/useCandidates';
 import { useJobs } from '@/hooks/useJobs';
@@ -73,10 +74,13 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <PageHeader
-        title="Dashboard"
-        description="Welcome back! Here's an overview of your agency operations."
-      />
+      <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-3 mb-2">
+        <PageHeader
+          title="Dashboard"
+          description="Welcome back! Here's an overview of your agency operations."
+        />
+        <DailyReportButton />
+      </div>
 
       {/* Daily targets — color-coded progress vs goals */}
       <DailyTargets />
