@@ -74,10 +74,13 @@ const Dashboard = () => {
 
   return (
     <DashboardLayout>
-      <PageHeader
-        title="Dashboard"
-        description="Welcome back! Here's an overview of your agency operations."
-      />
+      <div className="flex items-start sm:items-center justify-between flex-col sm:flex-row gap-3 mb-2">
+        <PageHeader
+          title="Dashboard"
+          description="Welcome back! Here's an overview of your agency operations."
+        />
+        <DailyReportButton />
+      </div>
 
       {/* Daily targets — color-coded progress vs goals */}
       <DailyTargets />
