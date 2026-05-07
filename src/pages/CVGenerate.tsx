@@ -34,6 +34,7 @@ const CVGenerate = () => {
   const buildCVDataFromCandidate = (candidate: CandidateDB, enhanced?: Partial<CVData> | null): CVData => ({
     fullName: candidate.full_name,
     phone: candidate.phone,
+    email: candidate.email || undefined,
     address: candidate.address || '',
     dateOfBirth: candidate.date_of_birth || undefined,
     nationality: candidate.nationality || 'Nepali',
@@ -53,6 +54,7 @@ const CVGenerate = () => {
   const buildCVDataFromNew = (d: NewCandidateData, enhanced?: Partial<CVData> | null): CVData => ({
     fullName: d.full_name,
     phone: d.phone,
+    email: d.email || undefined,
     address: d.address || '',
     dateOfBirth: d.date_of_birth || undefined,
     nationality: d.nationality || 'Nepali',

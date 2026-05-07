@@ -7,6 +7,7 @@ export interface CandidateDB {
   full_name: string;
   phone: string;
   address: string | null;
+  email?: string | null;
   skills: string[];
   experience_years: number;
   education_level: string | null;

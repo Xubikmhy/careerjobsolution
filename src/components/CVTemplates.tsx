@@ -4,12 +4,16 @@ import { getAgencySettings } from '@/utils/agencySettings';
 export interface CVData {
   fullName: string;
   phone: string;
+  email?: string;
   address: string;
+  tagline?: string;
   dateOfBirth?: string;
   nationality?: string;
   maritalStatus?: string;
   languages: string[];
   educationLevel: string;
+  educationSchool?: string;
+  educationYear?: string;
   experienceYears: number;
   expectedSalary: number;
   skills: string[];
@@ -61,196 +65,286 @@ function addFooter(doc: jsPDF) {
   doc.text(new Date().toLocaleDateString('en-NP', { year: 'numeric', month: 'long', day: 'numeric' }), pageWidth - 20 - 35, footerY);
 }
 
+// ─────────────────────────────────────────────
+// PROFESSIONAL TEMPLATE — A4 single-page modern layout
+// Matches the "Sachina Chhetri" reference design
+// ─────────────────────────────────────────────
 export function generateProfessionalCV(data: CVData): jsPDF {
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  const contentWidth = pageWidth - margin * 2;
-  let y = 25;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();   // 210
+  const pageH = doc.internal.pageSize.getHeight();  // 297
+  const M = 14; // outer margin
+  const contentW = pageW - M * 2;
 
-  addWatermark(doc);
+  // Color tokens (matching reference)
+  const ink: [number, number, number] = [17, 24, 39];        // near-black
+  const body: [number, number, number] = [55, 65, 81];       // gray-700
+  const muted: [number, number, number] = [107, 114, 128];   // gray-500
+  const label: [number, number, number] = [120, 126, 138];   // gray-450 (section labels)
+  const cardBorder: [number, number, number] = [226, 232, 240]; // slate-200
+  const chipBg: [number, number, number] = [248, 250, 252];  // slate-50
+  const chipBorder: [number, number, number] = [226, 232, 240];
 
-  // Header line
-  doc.setDrawColor(40, 40, 40);
-  doc.setLineWidth(1.5);
-  doc.line(margin, 15, pageWidth - margin, 15);
+  let y = 18;
 
-  // Name
+  // ── Subtle top gradient strip (faux via filled rect with light tint) ──
+  doc.setFillColor(245, 247, 252);
+  doc.rect(0, 0, pageW, 6, 'F');
+
+  // ── Name ──
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(20, 20, 20);
-  doc.setFontSize(24);
-  const nameWidth = doc.getTextWidth(data.fullName.toUpperCase());
-  doc.text(data.fullName.toUpperCase(), (pageWidth - nameWidth) / 2, y);
+  doc.setTextColor(...ink);
+  doc.setFontSize(30);
+  doc.text(data.fullName, M, y + 6);
+  y += 12;
+
+  // ── Tagline / role line ──
+  const tagline = data.tagline
+    || (data.skills && data.skills.length > 0
+        ? data.skills.slice(0, 3).join('  •  ')
+        : 'Professional');
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(11);
+  doc.setTextColor(...body);
+  doc.text(tagline, M, y + 4);
   y += 10;
 
-  // Contact
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(60, 60, 60);
-  const contact = [data.phone, data.address].filter(Boolean).join('  |  ');
-  const contactW = doc.getTextWidth(contact);
-  doc.text(contact, (pageWidth - contactW) / 2, y);
-  y += 8;
+  // ── Contact pill chips ──
+  const chips: string[] = [];
+  if (data.address) chips.push(data.address);
+  if (data.phone) chips.push(data.phone);
+  if (data.email) chips.push(data.email);
 
-  // Personal
-  const personal = [];
-  if (data.dateOfBirth) {
-    const age = new Date().getFullYear() - new Date(data.dateOfBirth).getFullYear();
-    personal.push(`Age: ${age}`);
-  }
-  if (data.nationality) personal.push(data.nationality);
-  if (data.maritalStatus) personal.push(data.maritalStatus);
-  if (personal.length > 0) {
-    const personalLine = personal.join('  |  ');
-    doc.setFontSize(9);
-    const pw = doc.getTextWidth(personalLine);
-    doc.text(personalLine, (pageWidth - pw) / 2, y);
-    y += 6;
-  }
-
-  if (data.languages.length > 0) {
-    const langLine = `Languages: ${data.languages.join(', ')}`;
-    doc.setFontSize(9);
-    const lw = doc.getTextWidth(langLine);
-    doc.text(langLine, (pageWidth - lw) / 2, y);
-    y += 8;
-  }
-
-  y += 5;
-  doc.setLineWidth(0.5);
-  doc.setDrawColor(100, 100, 100);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 15;
-
-  const addSection = (title: string) => {
-    if (y > doc.internal.pageSize.getHeight() - 50) {
-      doc.addPage();
-      addWatermark(doc);
-      y = 25;
-    }
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(30, 30, 30);
-    doc.text(title.toUpperCase(), margin, y);
-    y += 2;
+  doc.setFontSize(9);
+  let chipX = M;
+  const chipY = y + 2;
+  const chipH = 6.5;
+  chips.forEach((text) => {
+    const tw = doc.getTextWidth(text);
+    const w = tw + 6;
+    doc.setDrawColor(...chipBorder);
+    doc.setFillColor(...chipBg);
     doc.setLineWidth(0.3);
-    doc.line(margin, y, margin + 35, y);
-    y += 8;
+    doc.roundedRect(chipX, chipY, w, chipH, 3.2, 3.2, 'FD');
+    doc.setTextColor(...body);
+    doc.text(text, chipX + 3, chipY + 4.4);
+    chipX += w + 3;
+  });
+  y += 14;
+
+  // Helpers
+  const sectionLabel = (title: string) => {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(...label);
+    // Letter-spaced uppercase
+    const spaced = title.toUpperCase().split('').join(' ');
+    doc.text(spaced, M, y);
+    y += 5;
   };
 
-  // Career Objective
-  if (data.careerObjective) {
-    addSection('Career Objective');
+  const wrappedText = (text: string, x: number, width: number, lineH = 4.2, size = 9.5, color = body) => {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(50, 50, 50);
-    const lines = doc.splitTextToSize(data.careerObjective, contentWidth);
-    doc.text(lines, margin, y);
-    y += lines.length * 5 + 10;
-  }
+    doc.setFontSize(size);
+    doc.setTextColor(...(color as [number, number, number]));
+    const lines = doc.splitTextToSize(text, width);
+    doc.text(lines, x, y);
+    y += lines.length * lineH;
+    return lines.length;
+  };
 
-  // Professional Summary
-  if (data.professionalSummary) {
-    addSection('Professional Summary');
+  // ── PROFESSIONAL SUMMARY ──
+  const summary = data.professionalSummary
+    || data.careerObjective
+    || `Dedicated professional with ${data.experienceYears} year${data.experienceYears !== 1 ? 's' : ''} of practical experience. Skilled in ${(data.skills || []).slice(0, 4).join(', ') || 'multiple areas'}. Reliable, adaptable, and committed to delivering quality work.`;
+
+  sectionLabel('Professional Summary');
+  wrappedText(summary, M, contentW, 4.2, 9.5);
+  y += 5;
+
+  // ── PROFESSIONAL EXPERIENCE ──
+  const exps = data.workExperiences && data.workExperiences.length > 0 ? data.workExperiences : [];
+
+  if (exps.length > 0) {
+    sectionLabel('Professional Experience');
+
+    // Group by company (use first company as primary header — like reference)
+    const primaryCompany = exps[0].company;
+    const primaryMeta = [data.address, exps.length > 0 ? `${data.experienceYears} Year${data.experienceYears !== 1 ? 's' : ''}` : null, exps[0].duration]
+      .filter(Boolean).join('  •  ');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.setTextColor(...ink);
+    doc.text(primaryCompany, M, y);
+    y += 4.5;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(50, 50, 50);
-    const lines = doc.splitTextToSize(data.professionalSummary, contentWidth);
-    doc.text(lines, margin, y);
-    y += lines.length * 5 + 12;
-  }
+    doc.setFontSize(9);
+    doc.setTextColor(...muted);
+    doc.text(primaryMeta, M, y);
+    y += 5;
 
-  // Work Experience
-  if (data.workExperiences && data.workExperiences.length > 0) {
-    addSection('Work Experience');
-    data.workExperiences.forEach(work => {
-      if (y > doc.internal.pageSize.getHeight() - 60) {
-        doc.addPage();
-        addWatermark(doc);
-        y = 25;
-      }
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(10);
-      doc.setTextColor(30, 30, 30);
-      doc.text(work.position, margin + 5, y);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(80, 80, 80);
-      doc.text(`| ${work.company}`, margin + 5 + doc.getTextWidth(work.position + ' '), y);
-      y += 5;
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      doc.text(work.duration, margin + 5, y);
-      y += 5;
-      doc.setFontSize(10);
-      doc.setTextColor(50, 50, 50);
-      const respLines = doc.splitTextToSize(`• ${work.responsibilities}`, contentWidth - 10);
-      doc.text(respLines, margin + 5, y);
-      y += respLines.length * 5 + 8;
+    // 2-column cards for each role
+    const colGap = 5;
+    const colW = (contentW - colGap) / 2;
+    const cardPadX = 4;
+    const cardPadY = 4;
+
+    // Compute card heights first
+    const cardData = exps.map((work) => {
+      const respLines = doc.splitTextToSize(work.responsibilities || '', colW - cardPadX * 2 - 3);
+      // Use bullets (split by sentence if single string)
+      const bullets = (work.responsibilities || '')
+        .split(/\n|(?<=\.) /)
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 3);
+      const allLines = bullets.flatMap((b) => doc.splitTextToSize('• ' + b, colW - cardPadX * 2 - 2));
+      return { work, bullets, allLines };
     });
+
+    // Render cards in pairs
+    for (let i = 0; i < cardData.length; i += 2) {
+      const left = cardData[i];
+      const right = cardData[i + 1];
+      const leftLines = left.allLines.length;
+      const rightLines = right ? right.allLines.length : 0;
+      const cardH = Math.max(leftLines, rightLines) * 4 + cardPadY * 2 + 7;
+
+      // Draw both cards
+      [{ d: left, x: M }, right ? { d: right, x: M + colW + colGap } : null].forEach((entry) => {
+        if (!entry) return;
+        doc.setDrawColor(...cardBorder);
+        doc.setFillColor(255, 255, 255);
+        doc.setLineWidth(0.3);
+        doc.roundedRect(entry.x, y, colW, cardH, 2.2, 2.2, 'S');
+
+        // Position title
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10.5);
+        doc.setTextColor(...ink);
+        doc.text(entry.d.work.position, entry.x + cardPadX, y + cardPadY + 3);
+
+        // Bullets
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(...body);
+        let by = y + cardPadY + 8;
+        entry.d.bullets.forEach((b) => {
+          const lines = doc.splitTextToSize('•  ' + b, colW - cardPadX * 2 - 2);
+          doc.text(lines, entry.x + cardPadX, by);
+          by += lines.length * 4;
+        });
+      });
+
+      y += cardH + 4;
+    }
+    y += 2;
   }
 
-  // Education
-  addSection('Education');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(50, 50, 50);
-  doc.text(`• ${data.educationLevel || 'Not specified'}`, margin + 5, y);
-  y += 12;
+  // ── EDUCATION & LANGUAGES (two cards side by side) ──
+  if (data.educationLevel || data.languages.length > 0) {
+    sectionLabel('Education & Languages');
+    const colGap = 5;
+    const colW = (contentW - colGap) / 2;
+    const padX = 4;
+    const padY = 4.5;
 
-  // Skills
-  addSection('Skills & Competencies');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(50, 50, 50);
-  const skillsPerRow = 3;
-  const skillWidth = contentWidth / skillsPerRow;
-  data.skills.forEach((skill, index) => {
-    const col = index % skillsPerRow;
-    const row = Math.floor(index / skillsPerRow);
-    if (col === 0 && row > 0) y += 6;
-    doc.text(`• ${skill}`, margin + 5 + col * skillWidth, y);
-  });
-  y += 12;
+    // Education content
+    const eduTitle = 'Education';
+    const eduMain = data.educationLevel || 'Not specified';
+    const eduSchool = data.educationSchool || '';
+    const eduYear = data.educationYear || '';
 
-  // Expected Salary
-  addSection('Expected Remuneration');
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(50, 50, 50);
-  doc.text(`NPR ${data.expectedSalary.toLocaleString()} per month (negotiable)`, margin + 5, y);
-  y += 12;
+    // Languages content
+    const langTitle = 'Languages';
+    const langs = data.languages.length > 0 ? data.languages : ['Nepali'];
 
-  // References
-  if (data.references) {
-    addSection('References');
+    const eduLines = 1 + (eduSchool ? 1 : 0) + (eduYear ? 1 : 0);
+    const langLines = langs.length;
+    const cardH = Math.max(eduLines, langLines) * 4.5 + padY * 2 + 7;
+
+    // Education card
+    doc.setDrawColor(...cardBorder);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(M, y, colW, cardH, 2.2, 2.2, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(...ink);
+    doc.text(eduTitle, M + padX, y + padY + 3);
+    let ey = y + padY + 8.5;
+    doc.setFontSize(9.5);
+    doc.text(eduMain, M + padX, ey);
+    ey += 4.5;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.setTextColor(50, 50, 50);
-    doc.text(`• ${data.references}`, margin + 5, y);
-    y += 12;
+    doc.setFontSize(9);
+    doc.setTextColor(...body);
+    if (eduSchool) { doc.text(eduSchool, M + padX, ey); ey += 4.5; }
+    if (eduYear) { doc.text(eduYear, M + padX, ey); }
+
+    // Languages card
+    const lx = M + colW + colGap;
+    doc.setDrawColor(...cardBorder);
+    doc.roundedRect(lx, y, colW, cardH, 2.2, 2.2, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(...ink);
+    doc.text(langTitle, lx + padX, y + padY + 3);
+    let ly = y + padY + 8.5;
+    doc.setFontSize(9);
+    langs.forEach((lang) => {
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...ink);
+      doc.text(lang, lx + padX, ly);
+      const lw = doc.getTextWidth(lang);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(...body);
+      doc.text('  —  Professional Working Proficiency', lx + padX + lw, ly);
+      ly += 4.5;
+    });
+
+    y += cardH + 6;
   }
 
-  // Declaration
-  const decl = data.declaration || 'I hereby declare that all the information provided above is true and correct to the best of my knowledge and belief.';
-  addSection('Declaration');
-  doc.setFont('helvetica', 'italic');
-  doc.setFontSize(9);
-  doc.setTextColor(60, 60, 60);
-  const declLines = doc.splitTextToSize(decl, contentWidth);
-  doc.text(declLines, margin, y);
-  y += declLines.length * 4 + 15;
+  // ── SKILLS (chip pills) ──
+  if (data.skills && data.skills.length > 0) {
+    sectionLabel('Skills');
+    let sx = M;
+    const sH = 6;
+    doc.setFontSize(8.8);
+    data.skills.forEach((skill) => {
+      const tw = doc.getTextWidth(skill);
+      const w = tw + 5;
+      if (sx + w > pageW - M) { sx = M; y += sH + 2; }
+      doc.setDrawColor(...chipBorder);
+      doc.setFillColor(...chipBg);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(sx, y, w, sH, 2.5, 2.5, 'FD');
+      doc.setTextColor(...body);
+      doc.text(skill, sx + 2.5, y + 4);
+      sx += w + 2.5;
+    });
+    y += sH + 6;
+  }
 
-  // Signature
+  // ── CAREER OBJECTIVE ──
+  if (data.careerObjective && data.professionalSummary) {
+    sectionLabel('Career Objective');
+    wrappedText(data.careerObjective, M, contentW, 4.2, 9.5);
+    y += 4;
+  }
+
+  // ── Bottom: Career Job Solution branding (small) ──
+  const settings = getAgencySettings();
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  doc.setTextColor(30, 30, 30);
-  doc.text('Date: _______________', margin, y);
-  doc.text('Signature: _______________', pageWidth - margin - 60, y);
+  doc.setFontSize(8);
+  doc.setTextColor(...muted);
+  const brand = `Prepared by ${settings.agencyName}`;
+  const brandW = doc.getTextWidth(brand);
+  doc.text(brand, (pageW - brandW) / 2, pageH - 8);
 
-  addFooter(doc);
   return doc;
 }
-
 export function generateModernCV(data: CVData): jsPDF {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
