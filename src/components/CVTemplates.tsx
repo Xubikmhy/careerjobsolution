@@ -69,149 +69,140 @@ function addFooter(doc: jsPDF) {
 // PROFESSIONAL TEMPLATE — A4 single-page modern layout
 // Matches the "Sachina Chhetri" reference design
 // ─────────────────────────────────────────────
-export function generateProfessionalCV(data: CVData): jsPDF {
+function renderProfessionalCV(data: CVData, scale: number): { doc: jsPDF; finalY: number; pageH: number; bottomLimit: number } {
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();   // 210
   const pageH = doc.internal.pageSize.getHeight();  // 297
   const M = 14; // outer margin
   const contentW = pageW - M * 2;
+  const bottomLimit = pageH - 12; // reserve space for footer brand
 
-  // Color tokens (matching reference)
-  const ink: [number, number, number] = [17, 24, 39];        // near-black
-  const body: [number, number, number] = [55, 65, 81];       // gray-700
-  const muted: [number, number, number] = [107, 114, 128];   // gray-500
-  const label: [number, number, number] = [120, 126, 138];   // gray-450 (section labels)
-  const cardBorder: [number, number, number] = [226, 232, 240]; // slate-200
-  const chipBg: [number, number, number] = [248, 250, 252];  // slate-50
+  // Color tokens
+  const ink: [number, number, number] = [17, 24, 39];
+  const body: [number, number, number] = [55, 65, 81];
+  const muted: [number, number, number] = [107, 114, 128];
+  const label: [number, number, number] = [120, 126, 138];
+  const cardBorder: [number, number, number] = [226, 232, 240];
+  const chipBg: [number, number, number] = [248, 250, 252];
   const chipBorder: [number, number, number] = [226, 232, 240];
 
-  let y = 18;
+  // Scale helpers — fonts and vertical spacing shrink together
+  const fs = (n: number) => n * scale;
+  const sp = (n: number) => n * scale;
+  // Line heights derived from font size (mm ≈ pt * 0.353)
+  const lh = (fontPt: number) => fontPt * scale * 0.42;
 
-  // ── Subtle top gradient strip (faux via filled rect with light tint) ──
+  let y = sp(18);
+
+  // Top tint strip
   doc.setFillColor(245, 247, 252);
   doc.rect(0, 0, pageW, 6, 'F');
 
-  // ── Name ──
+  // Name
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...ink);
-  doc.setFontSize(30);
-  doc.text(data.fullName, M, y + 6);
-  y += 12;
+  doc.setFontSize(fs(30));
+  doc.text(data.fullName, M, y + sp(6));
+  y += sp(12);
 
-  // ── Tagline / role line ──
+  // Tagline
   const tagline = data.tagline
-    || (data.skills && data.skills.length > 0
-        ? data.skills.slice(0, 3).join('  •  ')
-        : 'Professional');
+    || (data.skills && data.skills.length > 0 ? data.skills.slice(0, 3).join('  •  ') : 'Professional');
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(11);
+  doc.setFontSize(fs(11));
   doc.setTextColor(...body);
-  doc.text(tagline, M, y + 4);
-  y += 10;
+  doc.text(tagline, M, y + sp(4));
+  y += sp(10);
 
-  // ── Contact pill chips ──
+  // Contact pills
   const chips: string[] = [];
   if (data.address) chips.push(data.address);
   if (data.phone) chips.push(data.phone);
   if (data.email) chips.push(data.email);
-
-  doc.setFontSize(9);
+  doc.setFontSize(fs(9));
   let chipX = M;
-  const chipY = y + 2;
-  const chipH = 6.5;
+  const chipY = y + sp(2);
+  const chipH = sp(6.5);
   chips.forEach((text) => {
     const tw = doc.getTextWidth(text);
-    const w = tw + 6;
+    const w = tw + sp(6);
     doc.setDrawColor(...chipBorder);
     doc.setFillColor(...chipBg);
     doc.setLineWidth(0.3);
     doc.roundedRect(chipX, chipY, w, chipH, 3.2, 3.2, 'FD');
     doc.setTextColor(...body);
-    doc.text(text, chipX + 3, chipY + 4.4);
-    chipX += w + 3;
+    doc.text(text, chipX + sp(3), chipY + sp(4.4));
+    chipX += w + sp(3);
   });
-  y += 14;
+  y += sp(14);
 
-  // Helpers
   const sectionLabel = (title: string) => {
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
+    doc.setFontSize(fs(8.5));
     doc.setTextColor(...label);
-    // Letter-spaced uppercase
     const spaced = title.toUpperCase().split('').join(' ');
     doc.text(spaced, M, y);
-    y += 5;
+    y += sp(5);
   };
 
-  const wrappedText = (text: string, x: number, width: number, lineH = 4.2, size = 9.5, color = body) => {
+  const wrappedText = (text: string, x: number, width: number, lineHmm: number, sizePt: number) => {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(size);
-    doc.setTextColor(...(color as [number, number, number]));
+    doc.setFontSize(fs(sizePt));
+    doc.setTextColor(...body);
     const lines = doc.splitTextToSize(text, width);
     doc.text(lines, x, y);
-    y += lines.length * lineH;
-    return lines.length;
+    y += lines.length * lineHmm;
   };
 
-  // ── PROFESSIONAL SUMMARY ──
+  // Professional Summary
   const summary = data.professionalSummary
     || data.careerObjective
     || `Dedicated professional with ${data.experienceYears} year${data.experienceYears !== 1 ? 's' : ''} of practical experience. Skilled in ${(data.skills || []).slice(0, 4).join(', ') || 'multiple areas'}. Reliable, adaptable, and committed to delivering quality work.`;
-
   sectionLabel('Professional Summary');
-  wrappedText(summary, M, contentW, 4.2, 9.5);
-  y += 5;
+  wrappedText(summary, M, contentW, lh(9.5), 9.5);
+  y += sp(5);
 
-  // ── PROFESSIONAL EXPERIENCE ──
+  // Professional Experience
   const exps = data.workExperiences && data.workExperiences.length > 0 ? data.workExperiences : [];
-
   if (exps.length > 0) {
     sectionLabel('Professional Experience');
 
-    // Group by company (use first company as primary header — like reference)
     const primaryCompany = exps[0].company;
-    const primaryMeta = [data.address, exps.length > 0 ? `${data.experienceYears} Year${data.experienceYears !== 1 ? 's' : ''}` : null, exps[0].duration]
+    const primaryMeta = [data.address, `${data.experienceYears} Year${data.experienceYears !== 1 ? 's' : ''}`, exps[0].duration]
       .filter(Boolean).join('  •  ');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
+    doc.setFontSize(fs(13));
     doc.setTextColor(...ink);
     doc.text(primaryCompany, M, y);
-    y += 4.5;
+    y += sp(4.5);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(fs(9));
     doc.setTextColor(...muted);
     doc.text(primaryMeta, M, y);
-    y += 5;
+    y += sp(5);
 
-    // 2-column cards for each role
-    const colGap = 5;
+    const colGap = sp(5);
     const colW = (contentW - colGap) / 2;
-    const cardPadX = 4;
-    const cardPadY = 4;
+    const cardPadX = sp(4);
+    const cardPadY = sp(4);
+    const bulletLH = lh(9);
 
-    // Compute card heights first
+    doc.setFontSize(fs(9));
     const cardData = exps.map((work) => {
-      const respLines = doc.splitTextToSize(work.responsibilities || '', colW - cardPadX * 2 - 3);
-      // Use bullets (split by sentence if single string)
       const bullets = (work.responsibilities || '')
-        .split(/\n|(?<=\.) /)
-        .map((s) => s.trim())
-        .filter(Boolean)
-        .slice(0, 3);
-      const allLines = bullets.flatMap((b) => doc.splitTextToSize('• ' + b, colW - cardPadX * 2 - 2));
+        .split(/\n|(?<=\.) /).map((s) => s.trim()).filter(Boolean).slice(0, 3);
+      const allLines = bullets.flatMap((b) => doc.splitTextToSize('• ' + b, colW - cardPadX * 2 - sp(2)));
       return { work, bullets, allLines };
     });
 
-    // Render cards in pairs
     for (let i = 0; i < cardData.length; i += 2) {
       const left = cardData[i];
       const right = cardData[i + 1];
       const leftLines = left.allLines.length;
       const rightLines = right ? right.allLines.length : 0;
-      const cardH = Math.max(leftLines, rightLines) * 4 + cardPadY * 2 + 7;
+      const cardH = Math.max(leftLines, rightLines) * bulletLH + cardPadY * 2 + sp(7);
 
-      // Draw both cards
       [{ d: left, x: M }, right ? { d: right, x: M + colW + colGap } : null].forEach((entry) => {
         if (!entry) return;
         doc.setDrawColor(...cardBorder);
@@ -219,79 +210,69 @@ export function generateProfessionalCV(data: CVData): jsPDF {
         doc.setLineWidth(0.3);
         doc.roundedRect(entry.x, y, colW, cardH, 2.2, 2.2, 'S');
 
-        // Position title
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10.5);
+        doc.setFontSize(fs(10.5));
         doc.setTextColor(...ink);
-        doc.text(entry.d.work.position, entry.x + cardPadX, y + cardPadY + 3);
+        doc.text(entry.d.work.position, entry.x + cardPadX, y + cardPadY + sp(3));
 
-        // Bullets
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
+        doc.setFontSize(fs(9));
         doc.setTextColor(...body);
-        let by = y + cardPadY + 8;
+        let by = y + cardPadY + sp(8);
         entry.d.bullets.forEach((b) => {
-          const lines = doc.splitTextToSize('•  ' + b, colW - cardPadX * 2 - 2);
+          const lines = doc.splitTextToSize('•  ' + b, colW - cardPadX * 2 - sp(2));
           doc.text(lines, entry.x + cardPadX, by);
-          by += lines.length * 4;
+          by += lines.length * bulletLH;
         });
       });
-
-      y += cardH + 4;
+      y += cardH + sp(4);
     }
-    y += 2;
+    y += sp(2);
   }
 
-  // ── EDUCATION & LANGUAGES (two cards side by side) ──
+  // Education & Languages
   if (data.educationLevel || data.languages.length > 0) {
     sectionLabel('Education & Languages');
-    const colGap = 5;
+    const colGap = sp(5);
     const colW = (contentW - colGap) / 2;
-    const padX = 4;
-    const padY = 4.5;
+    const padX = sp(4);
+    const padY = sp(4.5);
 
-    // Education content
-    const eduTitle = 'Education';
     const eduMain = data.educationLevel || 'Not specified';
     const eduSchool = data.educationSchool || '';
     const eduYear = data.educationYear || '';
-
-    // Languages content
-    const langTitle = 'Languages';
     const langs = data.languages.length > 0 ? data.languages : ['Nepali'];
 
+    const rowH = lh(9.5);
     const eduLines = 1 + (eduSchool ? 1 : 0) + (eduYear ? 1 : 0);
     const langLines = langs.length;
-    const cardH = Math.max(eduLines, langLines) * 4.5 + padY * 2 + 7;
+    const cardH = Math.max(eduLines, langLines) * rowH + padY * 2 + sp(7);
 
-    // Education card
     doc.setDrawColor(...cardBorder);
     doc.setLineWidth(0.3);
     doc.roundedRect(M, y, colW, cardH, 2.2, 2.2, 'S');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
+    doc.setFontSize(fs(10.5));
     doc.setTextColor(...ink);
-    doc.text(eduTitle, M + padX, y + padY + 3);
-    let ey = y + padY + 8.5;
-    doc.setFontSize(9.5);
-    doc.text(eduMain, M + padX, ey);
-    ey += 4.5;
+    doc.text('Education', M + padX, y + padY + sp(3));
+    let ey = y + padY + sp(8.5);
+    doc.setFontSize(fs(9.5));
+    doc.text(eduMain, M + padX, ey); ey += rowH;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
+    doc.setFontSize(fs(9));
     doc.setTextColor(...body);
-    if (eduSchool) { doc.text(eduSchool, M + padX, ey); ey += 4.5; }
+    if (eduSchool) { doc.text(eduSchool, M + padX, ey); ey += rowH; }
     if (eduYear) { doc.text(eduYear, M + padX, ey); }
 
-    // Languages card
     const lx = M + colW + colGap;
     doc.setDrawColor(...cardBorder);
     doc.roundedRect(lx, y, colW, cardH, 2.2, 2.2, 'S');
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
+    doc.setFontSize(fs(10.5));
     doc.setTextColor(...ink);
-    doc.text(langTitle, lx + padX, y + padY + 3);
-    let ly = y + padY + 8.5;
-    doc.setFontSize(9);
+    doc.text('Languages', lx + padX, y + padY + sp(3));
+    let ly = y + padY + sp(8.5);
+    doc.setFontSize(fs(9));
     langs.forEach((lang) => {
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(...ink);
@@ -300,41 +281,41 @@ export function generateProfessionalCV(data: CVData): jsPDF {
       doc.setFont('helvetica', 'normal');
       doc.setTextColor(...body);
       doc.text('  —  Professional Working Proficiency', lx + padX + lw, ly);
-      ly += 4.5;
+      ly += rowH;
     });
 
-    y += cardH + 6;
+    y += cardH + sp(6);
   }
 
-  // ── SKILLS (chip pills) ──
+  // Skills (chip pills)
   if (data.skills && data.skills.length > 0) {
     sectionLabel('Skills');
     let sx = M;
-    const sH = 6;
-    doc.setFontSize(8.8);
+    const sH = sp(6);
+    doc.setFontSize(fs(8.8));
     data.skills.forEach((skill) => {
       const tw = doc.getTextWidth(skill);
-      const w = tw + 5;
-      if (sx + w > pageW - M) { sx = M; y += sH + 2; }
+      const w = tw + sp(5);
+      if (sx + w > pageW - M) { sx = M; y += sH + sp(2); }
       doc.setDrawColor(...chipBorder);
       doc.setFillColor(...chipBg);
       doc.setLineWidth(0.3);
       doc.roundedRect(sx, y, w, sH, 2.5, 2.5, 'FD');
       doc.setTextColor(...body);
-      doc.text(skill, sx + 2.5, y + 4);
-      sx += w + 2.5;
+      doc.text(skill, sx + sp(2.5), y + sp(4));
+      sx += w + sp(2.5);
     });
-    y += sH + 6;
+    y += sH + sp(6);
   }
 
-  // ── CAREER OBJECTIVE ──
+  // Career Objective (when both summary and objective exist)
   if (data.careerObjective && data.professionalSummary) {
     sectionLabel('Career Objective');
-    wrappedText(data.careerObjective, M, contentW, 4.2, 9.5);
-    y += 4;
+    wrappedText(data.careerObjective, M, contentW, lh(9.5), 9.5);
+    y += sp(4);
   }
 
-  // ── Bottom: Career Job Solution branding (small) ──
+  // Branding footer
   const settings = getAgencySettings();
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
@@ -343,9 +324,22 @@ export function generateProfessionalCV(data: CVData): jsPDF {
   const brandW = doc.getTextWidth(brand);
   doc.text(brand, (pageW - brandW) / 2, pageH - 8);
 
-  return doc;
+  return { doc, finalY: y, pageH, bottomLimit };
 }
-export function generateModernCV(data: CVData): jsPDF {
+
+export function generateProfessionalCV(data: CVData): jsPDF {
+  // Auto-fit: try scales from 1.0 down to 0.7 in 0.04 steps until content fits one A4 page
+  let result = renderProfessionalCV(data, 1);
+  if (result.finalY <= result.bottomLimit) return result.doc;
+
+  for (let scale = 0.96; scale >= 0.7; scale -= 0.04) {
+    const r = renderProfessionalCV(data, scale);
+    if (r.finalY <= r.bottomLimit) return r.doc;
+    result = r;
+  }
+  return result.doc; // fallback to smallest tried
+}
+
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
