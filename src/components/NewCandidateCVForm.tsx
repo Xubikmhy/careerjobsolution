@@ -23,6 +23,7 @@ const commonLanguages = ['Nepali', 'English', 'Hindi', 'Mandarin', 'Japanese', '
 export const defaultNewCandidate: NewCandidateData = {
   full_name: '',
   phone: '',
+  email: null,
   address: null,
   skills: [],
   experience_years: 0,
