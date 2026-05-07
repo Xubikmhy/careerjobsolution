@@ -74,10 +74,16 @@ export function NewCandidateCVForm({ data, onChange }: NewCandidateCVFormProps) 
         </div>
       </div>
 
-      {/* Address */}
-      <div>
-        <Label className="text-xs">Address</Label>
-        <Input placeholder="e.g., Lakeside, Pokhara" value={data.address || ''} onChange={e => update({ address: e.target.value })} />
+      {/* Address & Email */}
+      <div className="grid grid-cols-1 gap-3">
+        <div>
+          <Label className="text-xs">Address</Label>
+          <Input placeholder="e.g., Lakeside, Pokhara" value={data.address || ''} onChange={e => update({ address: e.target.value })} />
+        </div>
+        <div>
+          <Label className="text-xs">Email</Label>
+          <Input type="email" placeholder="name@example.com" value={data.email || ''} onChange={e => update({ email: e.target.value || null })} />
+        </div>
       </div>
 
       {/* DOB, Nationality, Marital */}
