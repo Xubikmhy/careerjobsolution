@@ -106,6 +106,7 @@ export type Database = {
           cv_url: string | null
           date_of_birth: string | null
           education_level: string | null
+          email: string | null
           expected_salary: number | null
           experience_years: number | null
           full_name: string
@@ -126,6 +127,7 @@ export type Database = {
           cv_url?: string | null
           date_of_birth?: string | null
           education_level?: string | null
+          email?: string | null
           expected_salary?: number | null
           experience_years?: number | null
           full_name: string
@@ -146,6 +148,7 @@ export type Database = {
           cv_url?: string | null
           date_of_birth?: string | null
           education_level?: string | null
+          email?: string | null
           expected_salary?: number | null
           experience_years?: number | null
           full_name?: string
