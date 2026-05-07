@@ -4,12 +4,16 @@ import { getAgencySettings } from '@/utils/agencySettings';
 export interface CVData {
   fullName: string;
   phone: string;
+  email?: string;
   address: string;
+  tagline?: string;
   dateOfBirth?: string;
   nationality?: string;
   maritalStatus?: string;
   languages: string[];
   educationLevel: string;
+  educationSchool?: string;
+  educationYear?: string;
   experienceYears: number;
   expectedSalary: number;
   skills: string[];
