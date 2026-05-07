@@ -345,6 +345,7 @@ export function generateProfessionalCV(data: CVData): jsPDF {
 
   return doc;
 }
+export function generateModernCV(data: CVData): jsPDF {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 20;
