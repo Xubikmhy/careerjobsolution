@@ -712,6 +712,9 @@ const Candidates = () => {
     onViewTimeline: (c: CandidateDB) => { setTimelineCandidate(c); setIsTimelineOpen(true); },
     onToggleInactive: handleToggleInactive,
     onInlineStatusChange: handleInlineStatusChange,
+    onInlineUpdate: async (c: CandidateDB, patch: Partial<CandidateDB>) => {
+      await updateCandidate.mutateAsync({ id: c.id, ...patch });
+    },
     onCopyPhone: handleCopyPhone,
     onToggleContacted: handleToggleContacted,
   };
