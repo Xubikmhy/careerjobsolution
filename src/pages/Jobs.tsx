@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2, MoreVertical, CheckCircle2, XCircle, RefreshCw, Clock, Copy } from 'lucide-react';
 import { JobFilters, JobFilterState, buildDefaultFilters } from '@/components/JobFilters';
+import { InlineEdit } from '@/components/InlineEdit';
 import { formatNPR } from '@/lib/utils';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
