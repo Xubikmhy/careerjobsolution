@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 interface InlineEditProps {
   value: string | number | null | undefined;
-  onSave: (next: string) => Promise<void> | void;
+  onSave: (next: string) => Promise<unknown> | unknown;
   type?: 'text' | 'number';
   display?: (v: string | number | null | undefined) => React.ReactNode;
   placeholder?: string;
