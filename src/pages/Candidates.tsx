@@ -4,6 +4,7 @@ import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, Che
 import { formatDistanceToNow } from 'date-fns';
 import { formatNPR } from '@/lib/utils';
 import { CandidateQuickView } from '@/components/CandidateQuickView';
+import { InlineEdit } from '@/components/InlineEdit';
 import { WhatsAppTemplatesMenu } from '@/components/WhatsAppTemplatesMenu';
 import { useAgencySettings } from '@/hooks/useAgencySettings';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -80,6 +81,7 @@ function CandidateTable({
   onViewTimeline,
   onToggleInactive,
   onInlineStatusChange,
+  onInlineUpdate,
   onCopyPhone,
   onToggleContacted,
   copiedId,
@@ -100,6 +102,7 @@ function CandidateTable({
   onViewTimeline: (c: CandidateDB) => void;
   onToggleInactive: (c: CandidateDB) => void;
   onInlineStatusChange: (c: CandidateDB, newStatus: string) => void;
+  onInlineUpdate: (c: CandidateDB, patch: Partial<CandidateDB>) => Promise<void>;
   onCopyPhone: (c: CandidateDB) => void;
   onToggleContacted: (c: CandidateDB) => void;
   copiedId: string | null;
@@ -163,7 +166,17 @@ function CandidateTable({
               </TableCell>
               <TableCell className="hidden md:table-cell">
                 <div className="flex items-center gap-1">
-                  <span className="text-sm text-muted-foreground">{candidate.phone}</span>
+                  {candidate.status === 'Active' || candidate.status === 'Sent for Interview' ? (
+                    <InlineEdit
+                      value={candidate.phone}
+                      onSave={(v) => onInlineUpdate(candidate, { phone: v })}
+                      placeholder="Phone"
+                      inputClassName="w-32"
+                      className="text-sm text-muted-foreground"
+                    />
+                  ) : (
+                    <span className="text-sm text-muted-foreground">{candidate.phone}</span>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -179,7 +192,19 @@ function CandidateTable({
                 <SkillTagList skills={candidate.skills || []} max={3} />
               </TableCell>
               <TableCell className="hidden sm:table-cell text-muted-foreground">{candidate.experience_years} yrs</TableCell>
-              <TableCell className="font-medium">{formatNPR(candidate.expected_salary)}</TableCell>
+              <TableCell className="font-medium">
+                {candidate.status === 'Active' || candidate.status === 'Sent for Interview' ? (
+                  <InlineEdit
+                    type="number"
+                    value={candidate.expected_salary}
+                    onSave={(v) => onInlineUpdate(candidate, { expected_salary: Number(v) || 0 })}
+                    display={(v) => formatNPR(Number(v) || 0)}
+                    inputClassName="w-24"
+                  />
+                ) : (
+                  formatNPR(candidate.expected_salary)
+                )}
+              </TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -687,6 +712,9 @@ const Candidates = () => {
     onViewTimeline: (c: CandidateDB) => { setTimelineCandidate(c); setIsTimelineOpen(true); },
     onToggleInactive: handleToggleInactive,
     onInlineStatusChange: handleInlineStatusChange,
+    onInlineUpdate: async (c: CandidateDB, patch: Partial<CandidateDB>) => {
+      await updateCandidate.mutateAsync({ id: c.id, ...patch });
+    },
     onCopyPhone: handleCopyPhone,
     onToggleContacted: handleToggleContacted,
   };

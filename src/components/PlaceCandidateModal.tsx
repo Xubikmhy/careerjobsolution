@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle2, MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +34,28 @@ export function PlaceCandidateModal({ candidate, jobs, open, onOpenChange, onSub
   const openJobs = jobs.filter(j => j.status === 'Open' || j.status === 'Filled');
   const selectedJob = openJobs.find(j => j.id === jobId);
 
+  // Prefill agreed salary from the candidate's expected salary, or fall back
+  // to the midpoint of the selected job's range — saves staff re-typing.
+  useEffect(() => {
+    if (!open) return;
+    if (agreedSalary) return;
+    if (candidate?.expected_salary) {
+      setAgreedSalary(String(candidate.expected_salary));
+    } else if (selectedJob) {
+      const mid = Math.round(((selectedJob.salary_min || 0) + (selectedJob.salary_max || 0)) / 2);
+      if (mid) setAgreedSalary(String(mid));
+    }
+  }, [open, candidate, selectedJob, agreedSalary]);
+
+  // Reset when modal closes
+  useEffect(() => {
+    if (!open) {
+      setJobId('');
+      setAgreedSalary('');
+      setRemarks('');
+    }
+  }, [open]);
+
   const handleSubmit = () => {
     if (!candidate || !jobId || !agreedSalary) return;
     onSubmit({
@@ -43,9 +65,6 @@ export function PlaceCandidateModal({ candidate, jobs, open, onOpenChange, onSub
       agreedSalary: parseFloat(agreedSalary),
       remarks,
     });
-    setJobId('');
-    setAgreedSalary('');
-    setRemarks('');
   };
 
   return (

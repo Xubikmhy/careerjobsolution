@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2, MoreVertical, CheckCircle2, XCircle, RefreshCw, Clock, Copy } from 'lucide-react';
 import { JobFilters, JobFilterState, buildDefaultFilters } from '@/components/JobFilters';
+import { InlineEdit } from '@/components/InlineEdit';
 import { formatNPR } from '@/lib/utils';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -266,11 +267,40 @@ const Jobs = () => {
         </div>
       </div>
       <div className="space-y-2 mb-4">
-        <p className="text-lg font-bold text-success">
-          {formatNPR(job.salary_min)} - {formatNPR(job.salary_max)}
-        </p>
+        {job.status === 'Open' ? (
+          <div className="flex items-center gap-1 text-lg font-bold text-success flex-wrap">
+            <InlineEdit
+              type="number"
+              value={job.salary_min}
+              onSave={(v) => updateJob.mutateAsync({ id: job.id, salary_min: Number(v) || 0 })}
+              display={(v) => formatNPR(Number(v) || 0)}
+              inputClassName="w-24"
+            />
+            <span>-</span>
+            <InlineEdit
+              type="number"
+              value={job.salary_max}
+              onSave={(v) => updateJob.mutateAsync({ id: job.id, salary_max: Number(v) || 0 })}
+              display={(v) => formatNPR(Number(v) || 0)}
+              inputClassName="w-24"
+            />
+          </div>
+        ) : (
+          <p className="text-lg font-bold text-success">
+            {formatNPR(job.salary_min)} - {formatNPR(job.salary_max)}
+          </p>
+        )}
         <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-          <span>{job.location}</span>
+          {job.status === 'Open' ? (
+            <InlineEdit
+              value={job.location ?? ''}
+              onSave={(v) => updateJob.mutateAsync({ id: job.id, location: v || null })}
+              placeholder="Location"
+              inputClassName="w-32"
+            />
+          ) : (
+            <span>{job.location}</span>
+          )}
           <span>•</span>
           <span>{job.timing}</span>
           <span>•</span>
