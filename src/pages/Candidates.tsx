@@ -81,6 +81,7 @@ function CandidateTable({
   onViewTimeline,
   onToggleInactive,
   onInlineStatusChange,
+  onInlineUpdate,
   onCopyPhone,
   onToggleContacted,
   copiedId,
@@ -101,6 +102,7 @@ function CandidateTable({
   onViewTimeline: (c: CandidateDB) => void;
   onToggleInactive: (c: CandidateDB) => void;
   onInlineStatusChange: (c: CandidateDB, newStatus: string) => void;
+  onInlineUpdate: (c: CandidateDB, patch: Partial<CandidateDB>) => Promise<void>;
   onCopyPhone: (c: CandidateDB) => void;
   onToggleContacted: (c: CandidateDB) => void;
   copiedId: string | null;
