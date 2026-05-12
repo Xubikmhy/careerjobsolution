@@ -4,6 +4,7 @@ import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, Che
 import { formatDistanceToNow } from 'date-fns';
 import { formatNPR } from '@/lib/utils';
 import { CandidateQuickView } from '@/components/CandidateQuickView';
+import { InlineEdit } from '@/components/InlineEdit';
 import { WhatsAppTemplatesMenu } from '@/components/WhatsAppTemplatesMenu';
 import { useAgencySettings } from '@/hooks/useAgencySettings';
 import { DashboardLayout } from '@/components/DashboardLayout';
