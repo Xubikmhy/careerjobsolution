@@ -166,7 +166,17 @@ function CandidateTable({
               </TableCell>
               <TableCell className="hidden md:table-cell">
                 <div className="flex items-center gap-1">
-                  <span className="text-sm text-muted-foreground">{candidate.phone}</span>
+                  {candidate.status === 'Active' || candidate.status === 'Sent for Interview' ? (
+                    <InlineEdit
+                      value={candidate.phone}
+                      onSave={(v) => onInlineUpdate(candidate, { phone: v })}
+                      placeholder="Phone"
+                      inputClassName="w-32"
+                      className="text-sm text-muted-foreground"
+                    />
+                  ) : (
+                    <span className="text-sm text-muted-foreground">{candidate.phone}</span>
+                  )}
                   <Button
                     variant="ghost"
                     size="icon"
@@ -182,7 +192,19 @@ function CandidateTable({
                 <SkillTagList skills={candidate.skills || []} max={3} />
               </TableCell>
               <TableCell className="hidden sm:table-cell text-muted-foreground">{candidate.experience_years} yrs</TableCell>
-              <TableCell className="font-medium">{formatNPR(candidate.expected_salary)}</TableCell>
+              <TableCell className="font-medium">
+                {candidate.status === 'Active' || candidate.status === 'Sent for Interview' ? (
+                  <InlineEdit
+                    type="number"
+                    value={candidate.expected_salary}
+                    onSave={(v) => onInlineUpdate(candidate, { expected_salary: Number(v) || 0 })}
+                    display={(v) => formatNPR(Number(v) || 0)}
+                    inputClassName="w-24"
+                  />
+                ) : (
+                  formatNPR(candidate.expected_salary)
+                )}
+              </TableCell>
               <TableCell>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
