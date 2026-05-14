@@ -34,6 +34,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { StatusBadge } from '@/components/StatusBadge';
+import { InlineEdit } from '@/components/InlineEdit';
+import { EditHistoryButton } from '@/components/EditHistoryButton';
 import { PlacementEditModal } from '@/components/PlacementEditModal';
 import { usePlacements, PlacementDB } from '@/hooks/usePlacements';
 import { useCandidates } from '@/hooks/useCandidates';
@@ -219,9 +221,15 @@ const Placements = () => {
         </p>
       </div>
 
-      {placement.notes && (
-        <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{placement.notes}</p>
-      )}
+      <div className="mb-4 text-sm text-muted-foreground">
+        <span className="opacity-60">Notes: </span>
+        <InlineEdit
+          value={placement.notes ?? ''}
+          onSave={(v) => updatePlacement.mutateAsync({ id: placement.id, notes: v || null })}
+          placeholder="Add notes"
+          inputClassName="w-full"
+        />
+      </div>
 
       <div className="flex gap-2 pt-3 border-t border-border">
         <Button
@@ -237,6 +245,7 @@ const Placements = () => {
             <><Clock className="h-4 w-4 mr-1" /> Mark Paid</>
           )}
         </Button>
+        <EditHistoryButton entityType="placement" entityId={placement.id} label={`${placement.candidate_name ?? ''} → ${placement.employer_name ?? ''}`} />
         <Button variant="ghost" size="sm" onClick={() => { setEditPlacement(placement); setIsEditOpen(true); }}>
           <Pencil className="h-4 w-4" />
         </Button>

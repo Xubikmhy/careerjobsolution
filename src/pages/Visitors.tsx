@@ -4,6 +4,8 @@ import { UserCheck, Plus, Trash2, Edit2, MapPin, Search, UserPlus, Download } fr
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SkillTagList } from '@/components/SkillTag';
+import { InlineEdit } from '@/components/InlineEdit';
+import { EditHistoryButton } from '@/components/EditHistoryButton';
 import { WhatsAppButton } from '@/components/WhatsAppButton';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,24 +223,47 @@ const Visitors = () => {
               {filtered.map(v => (
                 <TableRow key={v.id} className="hover:bg-muted/50">
                   <TableCell>
-                    <p className="font-medium">{v.full_name}</p>
+                    <InlineEdit
+                      value={v.full_name}
+                      onSave={(val) => updateVisitor.mutateAsync({ id: v.id, full_name: val || v.full_name })}
+                      placeholder="Name"
+                      className="font-medium"
+                      inputClassName="w-40"
+                    />
                     <p className="text-xs text-muted-foreground sm:hidden">{v.phone}</p>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell">
                     <span className="flex items-center gap-1 text-muted-foreground">
-                      {v.phone} <WhatsAppButton phone={v.phone} name={v.full_name} />
+                      <InlineEdit
+                        value={v.phone}
+                        onSave={(val) => updateVisitor.mutateAsync({ id: v.id, phone: val || v.phone })}
+                        placeholder="Phone"
+                        inputClassName="w-32"
+                      />
+                      <WhatsAppButton phone={v.phone} name={v.full_name} />
                     </span>
                   </TableCell>
-                  <TableCell className="hidden md:table-cell text-muted-foreground">{v.address || '-'}</TableCell>
+                  <TableCell className="hidden md:table-cell text-muted-foreground">
+                    <InlineEdit
+                      value={v.address ?? ''}
+                      onSave={(val) => updateVisitor.mutateAsync({ id: v.id, address: val || null })}
+                      placeholder="Address"
+                      inputClassName="w-40"
+                    />
+                  </TableCell>
                   <TableCell className="hidden lg:table-cell">
                     <SkillTagList skills={v.skills || []} max={3} />
                   </TableCell>
                   <TableCell className="hidden md:table-cell">
-                    {v.preferred_work_location ? (
-                      <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                        <MapPin className="h-3 w-3" /> {v.preferred_work_location}
-                      </span>
-                    ) : '-'}
+                    <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                      <MapPin className="h-3 w-3" />
+                      <InlineEdit
+                        value={v.preferred_work_location ?? ''}
+                        onSave={(val) => updateVisitor.mutateAsync({ id: v.id, preferred_work_location: val || null })}
+                        placeholder="Add location"
+                        inputClassName="w-32"
+                      />
+                    </span>
                   </TableCell>
                   <TableCell className="hidden sm:table-cell text-sm text-muted-foreground">
                     {v.created_at ? format(new Date(v.created_at), 'MMM d, yyyy') : '-'}
@@ -248,7 +273,8 @@ const Visitors = () => {
                       <Button variant="ghost" size="icon" onClick={() => handleConvertToCandidate(v)} title="Convert to Candidate" className="text-success hover:text-success">
                         <UserPlus className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openEdit(v)} title="Edit">
+                      <EditHistoryButton entityType="visitor" entityId={v.id} label={v.full_name} />
+                      <Button variant="ghost" size="icon" onClick={() => openEdit(v)} title="Edit full record">
                         <Edit2 className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => deleteVisitor.mutate(v.id)} title="Delete" className="text-destructive hover:text-destructive">

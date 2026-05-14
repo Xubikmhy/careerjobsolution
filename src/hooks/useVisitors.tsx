@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logEdits } from '@/hooks/useEditHistory';
 
 export interface VisitorDB {
   id: string;
@@ -49,6 +50,7 @@ export function useVisitors() {
 
   const updateVisitor = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<VisitorDB> & { id: string }) => {
+      const { data: before } = await supabase.from('visitors' as any).select('*').eq('id', id).single();
       const { data, error } = await supabase
         .from('visitors' as any)
         .update(updates as any)
@@ -56,10 +58,18 @@ export function useVisitors() {
         .select()
         .single();
       if (error) throw error;
+      await logEdits({
+        entity_type: 'visitor',
+        entity_id: id,
+        entity_label: (data as any)?.full_name ?? (before as any)?.full_name,
+        before: before as any,
+        after: updates as any,
+      });
       return data as unknown as VisitorDB;
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ['visitors'] });
+      queryClient.invalidateQueries({ queryKey: ['edit_history', 'visitor', vars.id] });
       toast.success('Visitor updated successfully');
     },
     onError: (error: Error) => {

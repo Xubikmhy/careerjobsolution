@@ -164,6 +164,42 @@ export type Database = {
         }
         Relationships: []
       }
+      edit_history: {
+        Row: {
+          changed_by: string | null
+          created_at: string
+          entity_id: string
+          entity_label: string | null
+          entity_type: string
+          field: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          changed_by?: string | null
+          created_at?: string
+          entity_id: string
+          entity_label?: string | null
+          entity_type: string
+          field: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          changed_by?: string | null
+          created_at?: string
+          entity_id?: string
+          entity_label?: string | null
+          entity_type?: string
+          field?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: []
+      }
       job_requirements: {
         Row: {
           company_name: string
