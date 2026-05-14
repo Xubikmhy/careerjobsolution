@@ -340,6 +340,37 @@ const Jobs = () => {
         </div>
       </div>
       <SkillTagList skills={job.required_skills || []} max={3} className="mb-4" />
+      {job.status === 'Open' && (
+        <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+          <div>
+            <span className="opacity-60">Contact: </span>
+            <InlineEdit
+              value={job.contact_person ?? ''}
+              onSave={(v) => updateJob.mutateAsync({ id: job.id, contact_person: v || null })}
+              placeholder="Name"
+              inputClassName="w-32"
+            />
+          </div>
+          <div>
+            <span className="opacity-60">Phone: </span>
+            <InlineEdit
+              value={job.employer_phone ?? ''}
+              onSave={(v) => updateJob.mutateAsync({ id: job.id, employer_phone: v || null })}
+              placeholder="Phone"
+              inputClassName="w-32"
+            />
+          </div>
+          <div className="col-span-2">
+            <span className="opacity-60">Remarks: </span>
+            <InlineEdit
+              value={job.remarks ?? ''}
+              onSave={(v) => updateJob.mutateAsync({ id: job.id, remarks: v || null })}
+              placeholder="Add remarks"
+              inputClassName="w-full"
+            />
+          </div>
+        </div>
+      )}
       {candidates.filter(c => c.status === 'Active').length > 0 && (
         <div className="mb-3">
           <p className="text-xs text-muted-foreground mb-1">Top candidates matching</p>
@@ -389,6 +420,7 @@ const Jobs = () => {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+        <EditHistoryButton entityType="job" entityId={job.id} label={`${job.role_title} – ${job.company_name}`} />
         <Button variant="ghost" size="sm" onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}>
           <Eye className="h-4 w-4" />
         </Button>
