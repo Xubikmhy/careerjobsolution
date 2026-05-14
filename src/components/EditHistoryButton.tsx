@@ -51,12 +51,6 @@ const FIELD_LABELS: Record<string, string> = {
 };
 
 export function EditHistoryButton({ entityType, entityId, label, iconOnly = true }: Props) {
-  const [opened, setOpened] = (function () {
-    return [false, () => undefined] as const;
-  })();
-  void opened;
-  void setOpened;
-
   return (
     <Popover>
       <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
