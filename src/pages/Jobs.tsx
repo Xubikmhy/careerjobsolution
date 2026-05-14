@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Briefcase, Plus, Trash2, Sparkles, Eye, Loader2, MoreVertical, CheckCircle2, XCircle, RefreshCw, Clock, Copy } from 'lucide-react';
 import { JobFilters, JobFilterState, buildDefaultFilters } from '@/components/JobFilters';
 import { InlineEdit } from '@/components/InlineEdit';
+import { EditHistoryButton } from '@/components/EditHistoryButton';
 import { formatNPR } from '@/lib/utils';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
@@ -256,9 +257,32 @@ const Jobs = () => {
       onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}
     >
       <div className="flex items-start justify-between mb-3">
-        <div>
-          <h3 className="font-semibold text-foreground">{job.role_title}</h3>
-          <p className="text-sm text-muted-foreground">{job.company_name}</p>
+        <div className="flex-1 min-w-0">
+          {job.status === 'Open' ? (
+            <>
+              <InlineEdit
+                value={job.role_title}
+                onSave={(v) => updateJob.mutateAsync({ id: job.id, role_title: v || job.role_title })}
+                placeholder="Role"
+                inputClassName="w-48"
+                className="font-semibold text-foreground"
+              />
+              <div>
+                <InlineEdit
+                  value={job.company_name}
+                  onSave={(v) => updateJob.mutateAsync({ id: job.id, company_name: v || job.company_name })}
+                  placeholder="Company"
+                  inputClassName="w-48"
+                  className="text-sm text-muted-foreground"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              <h3 className="font-semibold text-foreground">{job.role_title}</h3>
+              <p className="text-sm text-muted-foreground">{job.company_name}</p>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-1">
           {eff === 'Filled' && <CheckCircle2 className="h-4 w-4 text-primary" />}
