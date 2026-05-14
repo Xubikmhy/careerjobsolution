@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logEdits } from '@/hooks/useEditHistory';
 
 export interface PlacementDB {
   id: string;
@@ -73,6 +74,7 @@ export function usePlacements() {
 
   const updatePlacement = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<PlacementDB> & { id: string }) => {
+      const { data: before } = await supabase.from('placements').select('*').eq('id', id).single();
       const { data, error } = await supabase
         .from('placements')
         .update(updates)
@@ -81,10 +83,18 @@ export function usePlacements() {
         .single();
 
       if (error) throw error;
+      await logEdits({
+        entity_type: 'placement',
+        entity_id: id,
+        entity_label: `${(data as any)?.candidate_name ?? ''} → ${(data as any)?.employer_name ?? ''}`,
+        before: before as any,
+        after: updates as any,
+      });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ['placements'] });
+      queryClient.invalidateQueries({ queryKey: ['edit_history', 'placement', vars.id] });
       toast.success('Placement updated successfully');
     },
     onError: (error: Error) => {

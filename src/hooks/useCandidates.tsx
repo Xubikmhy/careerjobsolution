@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { logEdits } from '@/hooks/useEditHistory';
 
 export interface CandidateDB {
   id: string;
@@ -62,6 +63,7 @@ export function useCandidates() {
 
   const updateCandidate = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<CandidateDB> & { id: string }) => {
+      const { data: before } = await supabase.from('candidates').select('*').eq('id', id).single();
       const { data, error } = await supabase
         .from('candidates')
         .update(updates)
@@ -70,10 +72,18 @@ export function useCandidates() {
         .single();
 
       if (error) throw error;
+      await logEdits({
+        entity_type: 'candidate',
+        entity_id: id,
+        entity_label: (data as any)?.full_name ?? (before as any)?.full_name,
+        before: before as any,
+        after: updates as any,
+      });
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ['candidates'] });
+      queryClient.invalidateQueries({ queryKey: ['edit_history', 'candidate', vars.id] });
       toast.success('Candidate updated successfully');
     },
     onError: (error: Error) => {
