@@ -5,6 +5,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { formatNPR } from '@/lib/utils';
 import { CandidateQuickView } from '@/components/CandidateQuickView';
 import { InlineEdit } from '@/components/InlineEdit';
+import { EditHistoryButton } from '@/components/EditHistoryButton';
 import { WhatsAppTemplatesMenu } from '@/components/WhatsAppTemplatesMenu';
 import { useAgencySettings } from '@/hooks/useAgencySettings';
 import { DashboardLayout } from '@/components/DashboardLayout';
@@ -154,13 +155,23 @@ function CandidateTable({
               </TableCell>
               <TableCell>
                 <div>
-                  <button
-                    type="button"
-                    onClick={() => onQuickView(candidate)}
-                    className="font-medium text-foreground text-left hover:text-primary hover:underline transition-colors"
-                  >
-                    {candidate.full_name}
-                  </button>
+                  {candidate.status === 'Active' || candidate.status === 'Sent for Interview' ? (
+                    <InlineEdit
+                      value={candidate.full_name}
+                      onSave={(v) => onInlineUpdate(candidate, { full_name: v })}
+                      placeholder="Name"
+                      inputClassName="w-40"
+                      className="font-medium text-foreground"
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => onQuickView(candidate)}
+                      className="font-medium text-foreground text-left hover:text-primary hover:underline transition-colors"
+                    >
+                      {candidate.full_name}
+                    </button>
+                  )}
                   <p className="text-xs text-muted-foreground md:hidden truncate">{candidate.phone}</p>
                 </div>
               </TableCell>
