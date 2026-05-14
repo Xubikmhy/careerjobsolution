@@ -300,6 +300,7 @@ function CandidateTable({
                   <Button variant="ghost" size="icon" onClick={() => onGenerateCV(candidate)} title="Generate CV" className="text-primary hover:text-primary">
                     <FileText className="h-4 w-4" />
                   </Button>
+                  <EditHistoryButton entityType="candidate" entityId={candidate.id} label={candidate.full_name} />
                   <Button variant="ghost" size="icon" onClick={() => onDelete(candidate.id)} title="Delete" className="text-destructive hover:text-destructive">
                     <Trash2 className="h-4 w-4" />
                   </Button>
