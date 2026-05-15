@@ -741,16 +741,19 @@ const Candidates = () => {
         </Button>
       </div>
 
-      {/* Status Tabs */}
-      <Tabs value={statusTab} onValueChange={setStatusTab} className="mb-4">
-        <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="all">All ({statusCounts.all})</TabsTrigger>
-          <TabsTrigger value="Active">Active ({statusCounts.Active})</TabsTrigger>
-          <TabsTrigger value="Sent for Interview">Interview ({statusCounts['Sent for Interview']})</TabsTrigger>
-          <TabsTrigger value="Placed">Placed ({statusCounts.Placed})</TabsTrigger>
-          <TabsTrigger value="Inactive">Inactive ({statusCounts.Inactive})</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Status Summary Bar — clickable, color-coded */}
+      <StatusSummaryBar
+        className="mb-4"
+        active={statusTab}
+        onSelect={setStatusTab}
+        items={[
+          { key: 'all', label: 'All', count: statusCounts.all, variant: 'default' },
+          { key: 'Active', label: 'Active', count: statusCounts.Active, variant: 'success' },
+          { key: 'Sent for Interview', label: 'Interview', count: statusCounts['Sent for Interview'], variant: 'warning' },
+          { key: 'Placed', label: 'Placed', count: statusCounts.Placed, variant: 'info' },
+          { key: 'Inactive', label: 'Inactive', count: statusCounts.Inactive, variant: 'default' },
+        ] as StatusItem[]}
+      />
 
       <div className="flex items-center gap-4 mb-4">
         <SearchFilterBar
