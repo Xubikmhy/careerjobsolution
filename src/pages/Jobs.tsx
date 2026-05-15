@@ -109,6 +109,16 @@ const Jobs = () => {
   };
   const effectiveStatus = (job: JobDB) => (isExpired(job) ? 'Expired' : job.status);
 
+  const jobStatusCounts = useMemo(() => {
+    const c = { all: jobs.length, Open: 0, Filled: 0, Expired: 0, Closed: 0 };
+    jobs.forEach((j) => {
+      const eff = effectiveStatus(j);
+      if (eff in c) (c as any)[eff]++;
+    });
+    return c;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobs]);
+
   const filteredJobs = useMemo(() => {
     return jobs.filter((job) => {
       const matchesSearch =
