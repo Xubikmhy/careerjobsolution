@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Users, FileText, Eye, Trash2, Plus, Send, RotateCcw, MessageSquare, CheckCircle2, History, Download, Archive, RefreshCw, X, Copy, Check, Share2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { formatNPR } from '@/lib/utils';
+import { formatNPR, cn } from '@/lib/utils';
 import { CandidateQuickView } from '@/components/CandidateQuickView';
 import { InlineEdit } from '@/components/InlineEdit';
 import { EditHistoryButton } from '@/components/EditHistoryButton';
@@ -11,7 +11,8 @@ import { useAgencySettings } from '@/hooks/useAgencySettings';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
-import { StatusBadge, getStatusVariant } from '@/components/StatusBadge';
+import { StatusBadge, getStatusVariant, getStatusTint } from '@/components/StatusBadge';
+import { StatusSummaryBar, StatusItem } from '@/components/StatusSummaryBar';
 import { SkillTagList } from '@/components/SkillTag';
 import { CandidateFormModal } from '@/components/CandidateFormModal';
 import { CandidateDetailDrawer } from '@/components/CandidateDetailDrawer';
@@ -145,7 +146,7 @@ function CandidateTable({
               ? `Last contact: ${formatDistanceToNow(lastContact, { addSuffix: true })}`
               : 'No contact logged yet';
             return (
-            <TableRow key={candidate.id} className="hover:bg-muted/50" data-state={selected.has(candidate.id) ? 'selected' : undefined}>
+            <TableRow key={candidate.id} className={cn('hover:bg-muted/50', getStatusTint(candidate.status))} data-state={selected.has(candidate.id) ? 'selected' : undefined}>
               <TableCell>
                 <Checkbox
                   checked={selected.has(candidate.id)}
@@ -155,39 +156,25 @@ function CandidateTable({
               </TableCell>
               <TableCell>
                 <div>
-                  {candidate.status === 'Active' || candidate.status === 'Sent for Interview' ? (
-                    <InlineEdit
-                      value={candidate.full_name}
-                      onSave={(v) => onInlineUpdate(candidate, { full_name: v })}
-                      placeholder="Name"
-                      inputClassName="w-40"
-                      className="font-medium text-foreground"
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => onQuickView(candidate)}
-                      className="font-medium text-foreground text-left hover:text-primary hover:underline transition-colors"
-                    >
-                      {candidate.full_name}
-                    </button>
-                  )}
+                  <InlineEdit
+                    value={candidate.full_name}
+                    onSave={(v) => onInlineUpdate(candidate, { full_name: v })}
+                    placeholder="Name"
+                    inputClassName="w-40"
+                    className="font-medium text-foreground"
+                  />
                   <p className="text-xs text-muted-foreground md:hidden truncate">{candidate.phone}</p>
                 </div>
               </TableCell>
               <TableCell className="hidden md:table-cell">
                 <div className="flex items-center gap-1">
-                  {candidate.status === 'Active' || candidate.status === 'Sent for Interview' ? (
-                    <InlineEdit
-                      value={candidate.phone}
-                      onSave={(v) => onInlineUpdate(candidate, { phone: v })}
-                      placeholder="Phone"
-                      inputClassName="w-32"
-                      className="text-sm text-muted-foreground"
-                    />
-                  ) : (
-                    <span className="text-sm text-muted-foreground">{candidate.phone}</span>
-                  )}
+                  <InlineEdit
+                    value={candidate.phone}
+                    onSave={(v) => onInlineUpdate(candidate, { phone: v })}
+                    placeholder="Phone"
+                    inputClassName="w-32"
+                    className="text-sm text-muted-foreground"
+                  />
                   <Button
                     variant="ghost"
                     size="icon"
@@ -204,17 +191,13 @@ function CandidateTable({
               </TableCell>
               <TableCell className="hidden sm:table-cell text-muted-foreground">{candidate.experience_years} yrs</TableCell>
               <TableCell className="font-medium">
-                {candidate.status === 'Active' || candidate.status === 'Sent for Interview' ? (
-                  <InlineEdit
-                    type="number"
-                    value={candidate.expected_salary}
-                    onSave={(v) => onInlineUpdate(candidate, { expected_salary: Number(v) || 0 })}
-                    display={(v) => formatNPR(Number(v) || 0)}
-                    inputClassName="w-24"
-                  />
-                ) : (
-                  formatNPR(candidate.expected_salary)
-                )}
+                <InlineEdit
+                  type="number"
+                  value={candidate.expected_salary}
+                  onSave={(v) => onInlineUpdate(candidate, { expected_salary: Number(v) || 0 })}
+                  display={(v) => formatNPR(Number(v) || 0)}
+                  inputClassName="w-24"
+                />
               </TableCell>
               <TableCell>
                 <DropdownMenu>
@@ -758,16 +741,19 @@ const Candidates = () => {
         </Button>
       </div>
 
-      {/* Status Tabs */}
-      <Tabs value={statusTab} onValueChange={setStatusTab} className="mb-4">
-        <TabsList className="flex flex-wrap h-auto">
-          <TabsTrigger value="all">All ({statusCounts.all})</TabsTrigger>
-          <TabsTrigger value="Active">Active ({statusCounts.Active})</TabsTrigger>
-          <TabsTrigger value="Sent for Interview">Interview ({statusCounts['Sent for Interview']})</TabsTrigger>
-          <TabsTrigger value="Placed">Placed ({statusCounts.Placed})</TabsTrigger>
-          <TabsTrigger value="Inactive">Inactive ({statusCounts.Inactive})</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      {/* Status Summary Bar — clickable, color-coded */}
+      <StatusSummaryBar
+        className="mb-4"
+        active={statusTab}
+        onSelect={setStatusTab}
+        items={[
+          { key: 'all', label: 'All', count: statusCounts.all, variant: 'default' },
+          { key: 'Active', label: 'Active', count: statusCounts.Active, variant: 'success' },
+          { key: 'Sent for Interview', label: 'Interview', count: statusCounts['Sent for Interview'], variant: 'warning' },
+          { key: 'Placed', label: 'Placed', count: statusCounts.Placed, variant: 'info' },
+          { key: 'Inactive', label: 'Inactive', count: statusCounts.Inactive, variant: 'default' },
+        ] as StatusItem[]}
+      />
 
       <div className="flex items-center gap-4 mb-4">
         <SearchFilterBar

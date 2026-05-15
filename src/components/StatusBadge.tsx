@@ -54,6 +54,30 @@ export function StatusBadge({ status, variant = 'default', className, tooltip }:
   );
 }
 
+// Subtle row/card tint per status for at-a-glance scanning
+export function getStatusTint(status: string): string {
+  const v = getStatusVariant(status);
+  switch (v) {
+    case 'success': return 'bg-success/[0.04] hover:bg-success/[0.08]';
+    case 'warning': return 'bg-warning/[0.05] hover:bg-warning/[0.10]';
+    case 'error':   return 'bg-destructive/[0.04] hover:bg-destructive/[0.08]';
+    case 'info':    return 'bg-primary/[0.04] hover:bg-primary/[0.08]';
+    default:        return 'bg-muted/30 hover:bg-muted/50';
+  }
+}
+
+// Border tint variant for cards
+export function getStatusBorderTint(status: string): string {
+  const v = getStatusVariant(status);
+  switch (v) {
+    case 'success': return 'border-success/30';
+    case 'warning': return 'border-warning/30';
+    case 'error':   return 'border-destructive/30';
+    case 'info':    return 'border-primary/30';
+    default:        return 'border-border';
+  }
+}
+
 // Helper function to get variant based on status text
 export function getStatusVariant(status: string): StatusBadgeProps['variant'] {
   const statusLower = (status || '').toLowerCase();
