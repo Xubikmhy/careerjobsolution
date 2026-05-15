@@ -8,7 +8,9 @@ import { formatNPR } from '@/lib/utils';
 import { DashboardLayout } from '@/components/DashboardLayout';
 import { PageHeader } from '@/components/PageHeader';
 import { SearchFilterBar } from '@/components/SearchFilterBar';
-import { StatusBadge, getStatusVariant } from '@/components/StatusBadge';
+import { StatusBadge, getStatusVariant, getStatusBorderTint, getStatusTint } from '@/components/StatusBadge';
+import { StatusSummaryBar, StatusItem } from '@/components/StatusSummaryBar';
+import { cn } from '@/lib/utils';
 import { SkillTagList, SkillTag } from '@/components/SkillTag';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -253,78 +255,76 @@ const Jobs = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className={`bg-card rounded-xl border p-5 hover:shadow-lg transition-shadow cursor-pointer ${expired ? 'border-destructive/30' : 'border-border'}`}
+      className={cn('rounded-xl border p-5 hover:shadow-lg transition-shadow cursor-pointer', getStatusTint(eff), expired ? 'border-destructive/40' : getStatusBorderTint(eff))}
       onClick={() => { setSelectedJob(job); setIsDetailOpen(true); }}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
-          {job.status === 'Open' ? (
-            <>
-              <InlineEdit
-                value={job.role_title}
-                onSave={(v) => updateJob.mutateAsync({ id: job.id, role_title: v || job.role_title })}
-                placeholder="Role"
-                inputClassName="w-48"
-                className="font-semibold text-foreground"
-              />
-              <div>
-                <InlineEdit
-                  value={job.company_name}
-                  onSave={(v) => updateJob.mutateAsync({ id: job.id, company_name: v || job.company_name })}
-                  placeholder="Company"
-                  inputClassName="w-48"
-                  className="text-sm text-muted-foreground"
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <h3 className="font-semibold text-foreground">{job.role_title}</h3>
-              <p className="text-sm text-muted-foreground">{job.company_name}</p>
-            </>
-          )}
+          <InlineEdit
+            value={job.role_title}
+            onSave={(v) => updateJob.mutateAsync({ id: job.id, role_title: v || job.role_title })}
+            placeholder="Role"
+            inputClassName="w-48"
+            className="font-semibold text-foreground"
+          />
+          <div>
+            <InlineEdit
+              value={job.company_name}
+              onSave={(v) => updateJob.mutateAsync({ id: job.id, company_name: v || job.company_name })}
+              placeholder="Company"
+              inputClassName="w-48"
+              className="text-sm text-muted-foreground"
+            />
+          </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
           {eff === 'Filled' && <CheckCircle2 className="h-4 w-4 text-primary" />}
           {expired && <Clock className="h-4 w-4 text-destructive" />}
-          <StatusBadge status={eff} variant={getStatusVariant(eff)} />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" title="Click to change status" className="rounded-md hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <StatusBadge status={eff} variant={getStatusVariant(eff)} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {['Open', 'Filled', 'Expired', 'Closed'].map((s) => (
+                <DropdownMenuItem
+                  key={s}
+                  disabled={s === job.status}
+                  onClick={() => handleSetStatus(job, s)}
+                >
+                  {s === 'Filled' ? 'Fulfilled' : s}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <div className="space-y-2 mb-4">
-        {job.status === 'Open' ? (
-          <div className="flex items-center gap-1 text-lg font-bold text-success flex-wrap">
-            <InlineEdit
-              type="number"
-              value={job.salary_min}
-              onSave={(v) => updateJob.mutateAsync({ id: job.id, salary_min: Number(v) || 0 })}
-              display={(v) => formatNPR(Number(v) || 0)}
-              inputClassName="w-24"
-            />
-            <span>-</span>
-            <InlineEdit
-              type="number"
-              value={job.salary_max}
-              onSave={(v) => updateJob.mutateAsync({ id: job.id, salary_max: Number(v) || 0 })}
-              display={(v) => formatNPR(Number(v) || 0)}
-              inputClassName="w-24"
-            />
-          </div>
-        ) : (
-          <p className="text-lg font-bold text-success">
-            {formatNPR(job.salary_min)} - {formatNPR(job.salary_max)}
-          </p>
-        )}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap">
-          {job.status === 'Open' ? (
-            <InlineEdit
-              value={job.location ?? ''}
-              onSave={(v) => updateJob.mutateAsync({ id: job.id, location: v || null })}
-              placeholder="Location"
-              inputClassName="w-32"
-            />
-          ) : (
-            <span>{job.location}</span>
-          )}
+        <div className="flex items-center gap-1 text-lg font-bold text-success flex-wrap" onClick={(e) => e.stopPropagation()}>
+          <InlineEdit
+            type="number"
+            value={job.salary_min}
+            onSave={(v) => updateJob.mutateAsync({ id: job.id, salary_min: Number(v) || 0 })}
+            display={(v) => formatNPR(Number(v) || 0)}
+            inputClassName="w-24"
+          />
+          <span>-</span>
+          <InlineEdit
+            type="number"
+            value={job.salary_max}
+            onSave={(v) => updateJob.mutateAsync({ id: job.id, salary_max: Number(v) || 0 })}
+            display={(v) => formatNPR(Number(v) || 0)}
+            inputClassName="w-24"
+          />
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground flex-wrap" onClick={(e) => e.stopPropagation()}>
+          <InlineEdit
+            value={job.location ?? ''}
+            onSave={(v) => updateJob.mutateAsync({ id: job.id, location: v || null })}
+            placeholder="Location"
+            inputClassName="w-32"
+          />
           <span>•</span>
           <span>{job.timing}</span>
           <span>•</span>
@@ -340,37 +340,35 @@ const Jobs = () => {
         </div>
       </div>
       <SkillTagList skills={job.required_skills || []} max={3} className="mb-4" />
-      {job.status === 'Open' && (
-        <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
-          <div>
-            <span className="opacity-60">Contact: </span>
-            <InlineEdit
-              value={job.contact_person ?? ''}
-              onSave={(v) => updateJob.mutateAsync({ id: job.id, contact_person: v || null })}
-              placeholder="Name"
-              inputClassName="w-32"
-            />
-          </div>
-          <div>
-            <span className="opacity-60">Phone: </span>
-            <InlineEdit
-              value={job.employer_phone ?? ''}
-              onSave={(v) => updateJob.mutateAsync({ id: job.id, employer_phone: v || null })}
-              placeholder="Phone"
-              inputClassName="w-32"
-            />
-          </div>
-          <div className="col-span-2">
-            <span className="opacity-60">Remarks: </span>
-            <InlineEdit
-              value={job.remarks ?? ''}
-              onSave={(v) => updateJob.mutateAsync({ id: job.id, remarks: v || null })}
-              placeholder="Add remarks"
-              inputClassName="w-full"
-            />
-          </div>
+      <div className="grid grid-cols-2 gap-2 mb-3 text-xs text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+        <div>
+          <span className="opacity-60">Contact: </span>
+          <InlineEdit
+            value={job.contact_person ?? ''}
+            onSave={(v) => updateJob.mutateAsync({ id: job.id, contact_person: v || null })}
+            placeholder="Name"
+            inputClassName="w-32"
+          />
         </div>
-      )}
+        <div>
+          <span className="opacity-60">Phone: </span>
+          <InlineEdit
+            value={job.employer_phone ?? ''}
+            onSave={(v) => updateJob.mutateAsync({ id: job.id, employer_phone: v || null })}
+            placeholder="Phone"
+            inputClassName="w-32"
+          />
+        </div>
+        <div className="col-span-2">
+          <span className="opacity-60">Remarks: </span>
+          <InlineEdit
+            value={job.remarks ?? ''}
+            onSave={(v) => updateJob.mutateAsync({ id: job.id, remarks: v || null })}
+            placeholder="Add remarks"
+            inputClassName="w-full"
+          />
+        </div>
+      </div>
       {candidates.filter(c => c.status === 'Active').length > 0 && (
         <div className="mb-3">
           <p className="text-xs text-muted-foreground mb-1">Top candidates matching</p>
