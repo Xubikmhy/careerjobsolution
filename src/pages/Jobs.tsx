@@ -460,11 +460,24 @@ const Jobs = () => {
         action={{ label: 'Post Job', onClick: () => setIsFormOpen(true), icon: Plus }}
       />
 
+      <StatusSummaryBar
+        className="mb-4"
+        active={statusFilter}
+        onSelect={setStatusFilter}
+        items={[
+          { key: 'all', label: 'All', count: jobStatusCounts.all, variant: 'default' },
+          { key: 'Open', label: 'Open', count: jobStatusCounts.Open, variant: 'success' },
+          { key: 'Filled', label: 'Fulfilled', count: jobStatusCounts.Filled, variant: 'info' },
+          { key: 'Expired', label: 'Expired', count: jobStatusCounts.Expired, variant: 'error' },
+          { key: 'Closed', label: 'Closed', count: jobStatusCounts.Closed, variant: 'default' },
+        ] as StatusItem[]}
+      />
+
       <SearchFilterBar
         searchPlaceholder="Search by role, company, or location..."
         searchValue={searchQuery}
         onSearchChange={setSearchQuery}
-        filters={[{ name: 'status', label: 'Status', value: statusFilter, onChange: setStatusFilter, options: [{ value: 'Open', label: 'Open' }, { value: 'Filled', label: 'Fulfilled' }, { value: 'Expired', label: 'Expired' }, { value: 'Closed', label: 'Closed' }] }]}
+        filters={[]}
         className="mb-4"
       />
 
